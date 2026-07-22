@@ -9,6 +9,13 @@ import 'package:dollchecker/features/scan/domain/toy_analysis.dart';
 
 class QuotaExceededException implements Exception {}
 
+/// Averaged skill scores across a set of scans, plus how many scans fed it.
+class SkillAggregate {
+  final Map<String, double> averages; // skill key -> avg 0..100
+  final int scanCount;
+  const SkillAggregate(this.averages, this.scanCount);
+}
+
 class AnalysisException implements Exception {
   final String message;
   AnalysisException(this.message);
@@ -87,6 +94,39 @@ class ScanRepository {
       analysis:
           ToyAnalysis.fromJson(Map<String, dynamic>.from(map['raw_response'])),
     );
+  }
+
+  /// Average development score per skill across a child's scans (or all the
+  /// user's scans when [childId] is null). Aggregated client-side; RLS keeps
+  /// it scoped to the current user.
+  Future<SkillAggregate> skillAverages(String? childId) async {
+    // 1) scan ids in scope
+    var scanQuery = _client.from('scans').select('id');
+    if (childId != null) scanQuery = scanQuery.eq('child_profile_id', childId);
+    final scanRows = await scanQuery;
+    final ids =
+        (scanRows as List).map((r) => (r as Map)['id'].toString()).toList();
+    if (ids.isEmpty) return const SkillAggregate({}, 0);
+
+    // 2) dev scores for those scans
+    final rows = await _client
+        .from('development_scores')
+        .select('skill, score')
+        .inFilter('scan_id', ids);
+
+    final sums = <String, int>{};
+    final counts = <String, int>{};
+    for (final r in rows as List) {
+      final m = r as Map;
+      final skill = m['skill'].toString();
+      final score = (m['score'] as num?)?.toInt() ?? 0;
+      sums[skill] = (sums[skill] ?? 0) + score;
+      counts[skill] = (counts[skill] ?? 0) + 1;
+    }
+    final avg = <String, double>{
+      for (final k in sums.keys) k: sums[k]! / counts[k]!,
+    };
+    return SkillAggregate(avg, ids.length);
   }
 
   /// Signed URL for a private toy image (valid 1 hour), or null.

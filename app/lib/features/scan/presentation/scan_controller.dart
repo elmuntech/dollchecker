@@ -48,6 +48,13 @@ final historyProvider = FutureProvider<List<ScanSummary>>((ref) async {
   return ref.watch(scanRepositoryProvider).history();
 });
 
+/// Aggregated development scores for the selected child (drives the dashboard).
+final skillAveragesProvider = FutureProvider<SkillAggregate>((ref) async {
+  final child = ref.watch(selectedChildProvider);
+  ref.watch(historyProvider); // recompute when a new scan lands
+  return ref.watch(scanRepositoryProvider).skillAverages(child?.id);
+});
+
 /// Reopen a stored scan by id.
 final scanByIdProvider =
     FutureProvider.family<ScanResult, String>((ref, id) async {

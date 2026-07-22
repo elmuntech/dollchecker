@@ -81,6 +81,13 @@ only the official `gen-l10n` (runs automatically on `flutter pub get` / `flutter
 Onboarding → create a child profile → scan a toy (camera or gallery) → "Analyzing…" →
 result screen (safety badge, scores, play ideas) → the scan is saved to History.
 
+The app has a bottom navigation shell with three tabs:
+
+- **Scan** — capture/pick a toy and see recent scans.
+- **Dashboard** — the child's aggregated development profile (radar of headline
+  skills + strengths / growth areas across all their scans).
+- **History** — every past scan, reopenable.
+
 ## Roadmap
 
 - **V1** — toy collection, full development dashboard, Play Coach surface, subscriptions (RevenueCat), offline history.

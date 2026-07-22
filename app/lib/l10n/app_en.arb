@@ -57,6 +57,14 @@
   "russian": "Russian",
   "disclaimerTitle": "Important",
 
+  "scan": "Scan",
+  "dashboard": "Dashboard",
+  "strengths": "Strengths",
+  "growthAreas": "Growth areas",
+  "dashboardEmpty": "Scan a few toys to see your child's development profile.",
+  "toysScanned": "{count} toys scanned",
+  "@toysScanned": { "placeholders": { "count": {} } },
+
   "skill_fine_motor": "Fine motor",
   "skill_gross_motor": "Gross motor",
   "skill_creativity": "Creativity",

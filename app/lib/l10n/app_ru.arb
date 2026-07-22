@@ -55,6 +55,13 @@
   "russian": "Русский",
   "disclaimerTitle": "Важно",
 
+  "scan": "Скан",
+  "dashboard": "Панель",
+  "strengths": "Сильные стороны",
+  "growthAreas": "Зоны роста",
+  "dashboardEmpty": "Отсканируйте несколько игрушек, чтобы увидеть профиль развития ребёнка.",
+  "toysScanned": "Отсканировано игрушек: {count}",
+
   "skill_fine_motor": "Мелкая моторика",
   "skill_gross_motor": "Крупная моторика",
   "skill_creativity": "Креативность",

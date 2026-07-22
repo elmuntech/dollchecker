@@ -6,8 +6,7 @@ import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/auth/presentation/auth_screen.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/onboarding_child_screen.dart';
-import 'package:dollchecker/features/history/presentation/history_screen.dart';
-import 'package:dollchecker/features/home/presentation/home_screen.dart';
+import 'package:dollchecker/features/home/presentation/home_shell.dart';
 import 'package:dollchecker/features/scan/presentation/analyzing_screen.dart';
 import 'package:dollchecker/features/scan/presentation/result_screen.dart';
 import 'package:dollchecker/features/settings/presentation/settings_screen.dart';
@@ -46,10 +45,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/onboarding',
           builder: (_, __) => const OnboardingChildScreen()),
-      GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/', builder: (_, __) => const HomeShell()),
       GoRoute(
           path: '/analyzing', builder: (_, __) => const AnalyzingScreen()),
-      GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(
         path: '/scan/:id',
