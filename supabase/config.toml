@@ -1,0 +1,6 @@
+# Supabase project config. Run `supabase link --project-ref <ref>` first.
+project_id = "dollchecker"
+
+[functions.analyze-toy]
+# The function verifies the JWT itself and also relies on platform verification.
+verify_jwt = true
