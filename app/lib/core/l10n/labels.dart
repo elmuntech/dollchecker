@@ -1,4 +1,5 @@
 import 'package:dollchecker/core/domain/skills.dart';
+import 'package:dollchecker/features/missions/domain/mission_stats.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
 
 /// Maps stable English machine keys (from the AI / DB) to localized display
@@ -65,6 +66,24 @@ String skillGroupLabel(AppLocalizations l, SkillGroup group) {
       return l.group_language;
     case SkillGroup.exploration:
       return l.group_exploration;
+  }
+}
+
+/// Localized name of a gamification milestone.
+String missionBadgeLabel(AppLocalizations l, MissionBadge badge) {
+  switch (badge) {
+    case MissionBadge.firstMission:
+      return l.badge_firstMission;
+    case MissionBadge.threeDayStreak:
+      return l.badge_threeDayStreak;
+    case MissionBadge.weekStreak:
+      return l.badge_weekStreak;
+    case MissionBadge.monthStreak:
+      return l.badge_monthStreak;
+    case MissionBadge.tenMissions:
+      return l.badge_tenMissions;
+    case MissionBadge.fiftyMissions:
+      return l.badge_fiftyMissions;
   }
 }
 

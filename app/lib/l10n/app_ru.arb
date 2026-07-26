@@ -164,5 +164,36 @@
   "quotaResets": "Обновится {date}",
   "plan": "Тариф",
   "planFree": "Бесплатный",
-  "planPremium": "Премиум"
+  "planPremium": "Премиум",
+
+  "navMissions": "Сегодня",
+  "missions": "Ежедневные миссии",
+  "missionsToday": "Миссии на сегодня",
+  "missionsEmpty": "Сначала отсканируйте игрушку — миссии составляются из идей, которые дают ваши игрушки.",
+  "missionsAllDone": "На сегодня всё. До завтра!",
+  "missionComplete": "Готово",
+  "missionSkip": "Пропустить",
+  "missionUndo": "Вернуть",
+  "missionSkipped": "Пропущено",
+  "missionsProgress": "Выполнено {done} из {total}",
+
+  "streak": "Серия",
+  "streakDays": "{count, plural, =0{Серии пока нет} =1{1 день подряд} few{{count} дня подряд} many{{count} дней подряд} other{{count} дней подряд}}",
+  "longestStreak": "Рекорд: {count}",
+  "totalMissions": "{count, plural, =1{Выполнена 1 миссия} few{Выполнено {count} миссии} many{Выполнено {count} миссий} other{Выполнено {count} миссий}}",
+  "thisWeek": "Последние 7 дней",
+
+  "badges": "Достижения",
+  "badgesEmpty": "Выполните первую миссию, чтобы начать собирать достижения.",
+  "badge_firstMission": "Первая миссия",
+  "badge_threeDayStreak": "Серия 3 дня",
+  "badge_weekStreak": "Серия 7 дней",
+  "badge_monthStreak": "Серия 30 дней",
+  "badge_tenMissions": "10 миссий",
+  "badge_fiftyMissions": "50 миссий",
+
+  "toyRotation": "Пора достать снова",
+  "toyRotationHint": "Игрушки, с которыми давно не играли. Ротация возвращает к ним интерес.",
+  "neverPlayed": "Ещё не играли",
+  "lastPlayed": "Играли: {date}"
 }

@@ -12,6 +12,7 @@ import 'package:dollchecker/features/collection/presentation/toy_detail_screen.d
 import 'package:dollchecker/features/development/presentation/dashboard_screen.dart';
 import 'package:dollchecker/features/history/presentation/history_screen.dart';
 import 'package:dollchecker/features/home/presentation/home_screen.dart';
+import 'package:dollchecker/features/missions/presentation/missions_screen.dart';
 import 'package:dollchecker/features/play/presentation/play_screen.dart';
 import 'package:dollchecker/features/scan/presentation/analyzing_screen.dart';
 import 'package:dollchecker/features/scan/presentation/result_screen.dart';
@@ -60,6 +61,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/missions', builder: (_, __) => const MissionsScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(

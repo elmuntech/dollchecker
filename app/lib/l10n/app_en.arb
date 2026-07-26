@@ -175,5 +175,41 @@
   "@quotaResets": { "placeholders": { "date": {} } },
   "plan": "Plan",
   "planFree": "Free",
-  "planPremium": "Premium"
+  "planPremium": "Premium",
+
+  "navMissions": "Today",
+  "missions": "Daily missions",
+  "missionsToday": "Today's missions",
+  "missionsEmpty": "Scan a toy first — missions are built from the play ideas your toys unlock.",
+  "missionsAllDone": "All done for today. See you tomorrow!",
+  "missionComplete": "Done",
+  "missionSkip": "Skip",
+  "missionUndo": "Undo",
+  "missionSkipped": "Skipped",
+  "missionsProgress": "{done} of {total} done",
+  "@missionsProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
+
+  "streak": "Streak",
+  "streakDays": "{count, plural, =0{No streak yet} =1{1 day in a row} other{{count} days in a row}}",
+  "@streakDays": { "placeholders": { "count": { "type": "int" } } },
+  "longestStreak": "Best: {count}",
+  "@longestStreak": { "placeholders": { "count": { "type": "int" } } },
+  "totalMissions": "{count, plural, =1{1 mission completed} other{{count} missions completed}}",
+  "@totalMissions": { "placeholders": { "count": { "type": "int" } } },
+  "thisWeek": "Last 7 days",
+
+  "badges": "Milestones",
+  "badgesEmpty": "Complete your first mission to start collecting milestones.",
+  "badge_firstMission": "First mission",
+  "badge_threeDayStreak": "3-day streak",
+  "badge_weekStreak": "7-day streak",
+  "badge_monthStreak": "30-day streak",
+  "badge_tenMissions": "10 missions",
+  "badge_fiftyMissions": "50 missions",
+
+  "toyRotation": "Time to bring these back",
+  "toyRotationHint": "Toys that have not been played with in a while. Rotating toys keeps them interesting.",
+  "neverPlayed": "Not played yet",
+  "lastPlayed": "Last played {date}",
+  "@lastPlayed": { "placeholders": { "date": {} } }
 }

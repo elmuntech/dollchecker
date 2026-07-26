@@ -33,6 +33,7 @@ app/                      Flutter application
       auth, child_profile, onboarding
       scan, history           camera → analysis → result
       collection              toy collection (grid, detail, wishlist)
+      missions                daily missions, streaks, toy rotation
       development             skill dashboard (radar, strengths, gaps)
       play                    Play Coach feed + favorites
       profile                 subscription tier and scan quota
@@ -42,6 +43,7 @@ app/                      Flutter application
 supabase/
   migrations/0001_init.sql                    schema + RLS + storage bucket
   migrations/0002_v1_collection_dashboard.sql toy identity, aggregates, RPCs
+  migrations/0003_daily_missions.sql          daily missions + toy rotation
   functions/analyze-toy/index.ts              Claude vision proxy
   functions/analyze-toy/utils.ts              pure helpers (quota, toy identity)
 .github/workflows/ci.yml  analyze + test, Flutter and Deno
@@ -96,12 +98,31 @@ reachable from the bottom navigation bar:
 | Tab | What it shows |
 |-----|---------------|
 | **Home** | Scan entry point, remaining free scans, recent history |
+| **Today** | Three daily missions for the selected child, streak and milestones, and the toys due to come back out |
 | **Collection** | One card per toy — repeat scans of the same toy fold into a single entry. Search, owned/wishlist filters, per-toy scan history |
 | **Development** | Every scan for the selected child aggregated into a development index, a six-domain radar, top strengths, lowest-scoring gaps, and the skills nothing has measured yet |
 | **Play** | All play ideas the analyzer has produced, with an idea of the day, favorites, and a skill filter |
 
 Households with several children switch child from the app bar; the choice drives the
 dashboard, the Play Coach feed, and the age context sent to the analyzer.
+
+### How daily missions work
+
+Missions are assembled from the play ideas the analyzer has already produced —
+no extra model call. Each morning the app scores every stored idea on three
+signals and keeps the top three, preferring a different toy for each:
+
+- **Skill gap** — how weak the child is in the skills the idea targets, from the
+  development dashboard's aggregate.
+- **Toy rotation** — how long the toy behind the idea has sat unused, saturating
+  after 30 days. Completing a mission stamps the toy's `last_played_at`, so
+  today's play shapes next week's suggestions.
+- **Per-day jitter** — deterministic noise seeded on the idea id and the date,
+  so the set is identical all day but different tomorrow.
+
+Streaks are derived from the mission rows rather than stored, so they cannot
+drift out of sync. A streak survives an untouched today and only breaks once a
+full day is missed.
 
 ### How toys are deduplicated
 
@@ -123,7 +144,7 @@ CI runs `flutter analyze --fatal-infos`, `flutter test`, `deno fmt --check`,
 ## Roadmap
 
 - **V1** — ✅ toy collection, ✅ development dashboard, ✅ Play Coach surface; subscriptions (RevenueCat) and offline history still open.
-- **V2** — daily missions + gamification, toy rotation, AI chat.
+- **V2** — ✅ daily missions + gamification, ✅ toy rotation; AI chat still open.
 - **V3** — pgvector RAG (similar toys, semantic search), shopping assistant, trends & reports.
 
 ## Safety disclaimer
