@@ -1,3 +1,4 @@
+import 'package:dollchecker/core/domain/skills.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
 
 /// Maps stable English machine keys (from the AI / DB) to localized display
@@ -46,6 +47,24 @@ String skillLabel(AppLocalizations l, String key) {
       return l.skill_curiosity;
     default:
       return key;
+  }
+}
+
+/// Localized name of a developmental domain (the radar chart's axes).
+String skillGroupLabel(AppLocalizations l, SkillGroup group) {
+  switch (group) {
+    case SkillGroup.motor:
+      return l.group_motor;
+    case SkillGroup.cognitive:
+      return l.group_cognitive;
+    case SkillGroup.creative:
+      return l.group_creative;
+    case SkillGroup.social:
+      return l.group_social;
+    case SkillGroup.language:
+      return l.group_language;
+    case SkillGroup.exploration:
+      return l.group_exploration;
   }
 }
 

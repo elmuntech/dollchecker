@@ -6,7 +6,8 @@
 //   3. Store the toy image in the private `toy-images` bucket.
 //   4. Call Claude Vision with a forced JSON schema (guaranteed valid output).
 //   5. Persist scan + development_scores + play_ideas.
-//   6. Return the analysis to the client.
+//   6. Fold the toy into the user's collection (`upsert_toy_from_scan`).
+//   7. Return the analysis — plus the caller's remaining quota — to the client.
 //
 // Deploy:  supabase functions deploy analyze-toy
 // Secret:  supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
@@ -15,6 +16,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { ANALYSIS_SCHEMA } from "./schema.ts";
 import { buildUserText, SYSTEM_PROMPT } from "./prompt.ts";
+import {
+  base64ByteLength,
+  base64ToBytes,
+  evaluateQuota,
+  isAllowedMedia,
+  MAX_IMAGE_BYTES,
+  monthsSince,
+  nextMonthStart,
+  normalizeLocale,
+  toyIdentity,
+  toyImagePath,
+} from "./utils.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -22,8 +35,6 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const MODEL = "claude-sonnet-5";
-const FREE_MONTHLY_SCANS = 10;
-const ALLOWED_MEDIA = ["image/jpeg", "image/png", "image/webp"];
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -32,7 +43,9 @@ const json = (status: number, body: unknown) =>
   });
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
 
   try {
@@ -44,7 +57,9 @@ Deno.serve(async (req) => {
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: authErr } = await userClient.auth.getUser(jwt);
+    const { data: { user }, error: authErr } = await userClient.auth.getUser(
+      jwt,
+    );
     if (authErr || !user) return json(401, { error: "invalid_token" });
 
     // Service-role client for privileged writes (bypasses RLS).
@@ -56,10 +71,16 @@ Deno.serve(async (req) => {
       return json(400, { error: "image_base64_required" });
     }
     const mediaType: string = body.media_type ?? "image/jpeg";
-    if (!ALLOWED_MEDIA.includes(mediaType)) {
+    if (!isAllowedMedia(mediaType)) {
       return json(400, { error: "unsupported_media_type" });
     }
-    const locale: string = body.locale === "ru" ? "ru" : "en";
+    if (base64ByteLength(body.image_base64) > MAX_IMAGE_BYTES) {
+      return json(413, {
+        error: "image_too_large",
+        max_bytes: MAX_IMAGE_BYTES,
+      });
+    }
+    const locale = normalizeLocale(body.locale);
     const childProfileId: string | null = body.child_profile_id ?? null;
 
     // --- 3. Quota ---------------------------------------------------------
@@ -69,13 +90,13 @@ Deno.serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    let used = profile?.scan_quota_used ?? 0;
-    const resetAt = profile?.quota_reset_at ? new Date(profile.quota_reset_at) : null;
-    if (resetAt && Date.now() >= resetAt.getTime()) {
-      used = 0; // window rolled over
-    }
-    if ((profile?.tier ?? "free") === "free" && used >= FREE_MONTHLY_SCANS) {
-      return json(429, { error: "quota_exceeded", limit: FREE_MONTHLY_SCANS });
+    const quota = evaluateQuota({
+      tier: profile?.tier,
+      scanQuotaUsed: profile?.scan_quota_used,
+      quotaResetAt: profile?.quota_reset_at,
+    });
+    if (quota.exceeded) {
+      return json(429, { error: "quota_exceeded", limit: quota.limit });
     }
 
     // --- 4. Child age context --------------------------------------------
@@ -91,8 +112,7 @@ Deno.serve(async (req) => {
     }
 
     // --- 5. Store image ---------------------------------------------------
-    const ext = mediaType.split("/")[1];
-    const objectPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const objectPath = toyImagePath(user.id, mediaType, crypto.randomUUID());
     const bytes = base64ToBytes(body.image_base64);
     const { error: uploadErr } = await admin.storage
       .from("toy-images")
@@ -114,7 +134,11 @@ Deno.serve(async (req) => {
         // Kept under 16k so a non-streaming request stays within HTTP timeouts.
         max_tokens: 8000,
         system: [
-          { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+          {
+            type: "text",
+            text: SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
         ],
         output_config: {
           format: { type: "json_schema", schema: ANALYSIS_SCHEMA },
@@ -125,7 +149,11 @@ Deno.serve(async (req) => {
             content: [
               {
                 type: "image",
-                source: { type: "base64", media_type: mediaType, data: body.image_base64 },
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: body.image_base64,
+                },
               },
               { type: "text", text: buildUserText({ locale, childAgeMonths }) },
             ],
@@ -137,7 +165,10 @@ Deno.serve(async (req) => {
     if (!anthropicRes.ok) {
       const detail = await anthropicRes.text();
       console.error("anthropic error", anthropicRes.status, detail);
-      return json(502, { error: "analysis_failed", status: anthropicRes.status });
+      return json(502, {
+        error: "analysis_failed",
+        status: anthropicRes.status,
+      });
     }
 
     const completion = await anthropicRes.json();
@@ -212,50 +243,69 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- 8. Bump quota ----------------------------------------------------
+    // --- 8. Fold into the toy collection ----------------------------------
+    // An unidentifiable toy yields a null identity and gets no collection
+    // entry, so the grid never fills with nameless duplicates.
+    let toyId: string | null = null;
+    const identity = toyIdentity(
+      analysis.identification?.name,
+      analysis.identification?.brand,
+    );
+    if (identity) {
+      const { data: upsertedToyId, error: toyErr } = await admin.rpc(
+        "upsert_toy_from_scan",
+        {
+          p_user_id: user.id,
+          p_scan_id: scan.id,
+          p_name: identity.name,
+          p_brand: identity.brand,
+          p_category: analysis.identification?.category ?? null,
+          p_image_url: imageUrl,
+          p_safety: analysis.safety?.overall ?? null,
+          p_educational_score: analysis.development?.educational_score ?? null,
+        },
+      );
+      // A collection failure must not fail the scan — the analysis is the value.
+      if (toyErr) console.error("toy upsert failed", toyErr.message);
+      else toyId = (upsertedToyId as string | null) ?? null;
+    }
+
+    // --- 9. Bump quota ----------------------------------------------------
+    const usedAfter = quota.used + 1;
     await admin
       .from("profiles")
       .update({
-        scan_quota_used: used + 1,
-        quota_reset_at:
-          resetAt && Date.now() >= resetAt.getTime()
-            ? nextMonthStart()
-            : profile?.quota_reset_at,
+        scan_quota_used: usedAfter,
+        quota_reset_at: quota.rolledOver
+          ? nextMonthStart()
+          : profile?.quota_reset_at,
       })
       .eq("id", user.id);
 
-    return json(200, { scan_id: scan.id, image_path: imageUrl, analysis });
+    return json(200, {
+      scan_id: scan.id,
+      toy_id: toyId,
+      image_path: imageUrl,
+      analysis,
+      quota: {
+        limit: quota.limit,
+        used: usedAfter,
+        remaining: quota.remaining === null
+          ? null
+          : Math.max(0, quota.remaining - 1),
+      },
+    });
   } catch (e) {
     console.error("unhandled", e);
     return json(500, { error: "internal_error" });
   }
 });
 
-// --- helpers ------------------------------------------------------------
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-function monthsSince(dateStr: string): number {
-  const d = new Date(dateStr);
-  const now = new Date();
-  return Math.max(
-    0,
-    (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth()),
-  );
-}
-
-function nextMonthStart(): string {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString();
-}
-
 // --- types (mirror schema.ts) ------------------------------------------
 interface Analysis {
-  identification: Record<string, unknown>;
+  identification:
+    & { name?: string; brand?: string; category?: string }
+    & Record<string, unknown>;
   age_recommendation: { min_months: number; max_months: number; label: string };
   materials: string[];
   safety: { overall: string; score: number } & Record<string, unknown>;

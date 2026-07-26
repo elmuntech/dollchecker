@@ -5,12 +5,18 @@ import 'package:go_router/go_router.dart';
 import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/auth/presentation/auth_screen.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
+import 'package:dollchecker/features/child_profile/presentation/children_screen.dart';
 import 'package:dollchecker/features/child_profile/presentation/onboarding_child_screen.dart';
+import 'package:dollchecker/features/collection/presentation/collection_screen.dart';
+import 'package:dollchecker/features/collection/presentation/toy_detail_screen.dart';
+import 'package:dollchecker/features/development/presentation/dashboard_screen.dart';
 import 'package:dollchecker/features/history/presentation/history_screen.dart';
 import 'package:dollchecker/features/home/presentation/home_screen.dart';
+import 'package:dollchecker/features/play/presentation/play_screen.dart';
 import 'package:dollchecker/features/scan/presentation/analyzing_screen.dart';
 import 'package:dollchecker/features/scan/presentation/result_screen.dart';
 import 'package:dollchecker/features/settings/presentation/settings_screen.dart';
+import 'package:dollchecker/features/shell/presentation/home_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   // Bridge Riverpod changes → GoRouter refresh without recreating the router.
@@ -46,15 +52,45 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/onboarding',
           builder: (_, __) => const OnboardingChildScreen()),
-      GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
-      GoRoute(
-          path: '/analyzing', builder: (_, __) => const AnalyzingScreen()),
+
+      // Primary destinations. Each branch keeps its own navigation stack.
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, navigationShell) =>
+            HomeShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/collection',
+                builder: (_, __) => const CollectionScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/development',
+                builder: (_, __) => const DashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/play', builder: (_, __) => const PlayScreen()),
+          ]),
+        ],
+      ),
+
+      // Screens pushed above the shell.
+      GoRoute(path: '/analyzing', builder: (_, __) => const AnalyzingScreen()),
       GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/children', builder: (_, __) => const ChildrenScreen()),
       GoRoute(
         path: '/scan/:id',
         builder: (_, state) =>
             ResultScreen(scanId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/toy/:id',
+        builder: (_, state) =>
+            ToyDetailScreen(toyId: state.pathParameters['id']!),
       ),
     ],
   );

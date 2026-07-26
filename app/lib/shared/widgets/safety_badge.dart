@@ -25,6 +25,30 @@ class SafetyDot extends StatelessWidget {
   }
 }
 
+/// Compact safety verdict for chip rows, where the full [SafetyBadge] block
+/// would be too heavy.
+class SafetyChip extends StatelessWidget {
+  const SafetyChip({super.key, required this.level});
+  final SafetyLevel level;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final (color, label) = switch (level) {
+      SafetyLevel.green => (AppTheme.safetyGreen, l.safetyGreen),
+      SafetyLevel.yellow => (AppTheme.safetyYellow, l.safetyYellow),
+      SafetyLevel.red => (AppTheme.safetyRed, l.safetyRed),
+      SafetyLevel.unknown => (Colors.grey, '—'),
+    };
+    return Chip(
+      avatar: SafetyDot(level: level),
+      label: Text(label),
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
+      backgroundColor: color.withValues(alpha: 0.10),
+    );
+  }
+}
+
 class SafetyBadge extends StatelessWidget {
   const SafetyBadge({super.key, required this.level, required this.score});
   final SafetyLevel level;
@@ -43,9 +67,9 @@ class SafetyBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [

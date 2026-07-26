@@ -27,13 +27,24 @@ The Anthropic API key never ships in the client — it lives only in the Edge Fu
 ```
 app/                      Flutter application
   lib/
-    core/                 config, router, theme, network, supabase, errors
+    core/                 config, domain (skill keys/groups), router, theme, supabase
     l10n/                 app_en.arb, app_ru.arb
-    features/             onboarding, auth, child_profile, scan, history, ...
+    features/
+      auth, child_profile, onboarding
+      scan, history           camera → analysis → result
+      collection              toy collection (grid, detail, wishlist)
+      development             skill dashboard (radar, strengths, gaps)
+      play                    Play Coach feed + favorites
+      profile                 subscription tier and scan quota
+      shell                   bottom-navigation shell
     shared/widgets/       safety badge, score gauge, skill bar
+  test/                   unit + widget tests
 supabase/
-  migrations/0001_init.sql        schema + RLS + storage bucket
-  functions/analyze-toy/index.ts  Claude vision proxy
+  migrations/0001_init.sql                    schema + RLS + storage bucket
+  migrations/0002_v1_collection_dashboard.sql toy identity, aggregates, RPCs
+  functions/analyze-toy/index.ts              Claude vision proxy
+  functions/analyze-toy/utils.ts              pure helpers (quota, toy identity)
+.github/workflows/ci.yml  analyze + test, Flutter and Deno
 ```
 
 ## Getting started
@@ -44,7 +55,7 @@ supabase/
 # Install the Supabase CLI, then from repo root:
 supabase login
 supabase link --project-ref <your-project-ref>
-supabase db push                       # applies migrations/0001_init.sql
+supabase db push                       # applies everything in migrations/
 
 # Set the Anthropic key as an Edge Function secret (never in the client):
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
@@ -76,14 +87,42 @@ only the official `gen-l10n` (runs automatically on `flutter pub get` / `flutter
 
 `SUPABASE_ANON_KEY` is a public client key — safe to ship. Row-Level Security protects data.
 
-## MVP flow
+## App flow
 
 Onboarding → create a child profile → scan a toy (camera or gallery) → "Analyzing…" →
-result screen (safety badge, scores, play ideas) → the scan is saved to History.
+result screen (safety badge, scores, play ideas). Each scan then feeds four surfaces,
+reachable from the bottom navigation bar:
+
+| Tab | What it shows |
+|-----|---------------|
+| **Home** | Scan entry point, remaining free scans, recent history |
+| **Collection** | One card per toy — repeat scans of the same toy fold into a single entry. Search, owned/wishlist filters, per-toy scan history |
+| **Development** | Every scan for the selected child aggregated into a development index, a six-domain radar, top strengths, lowest-scoring gaps, and the skills nothing has measured yet |
+| **Play** | All play ideas the analyzer has produced, with an idea of the day, favorites, and a skill filter |
+
+Households with several children switch child from the app bar; the choice drives the
+dashboard, the Play Coach feed, and the age context sent to the analyzer.
+
+### How toys are deduplicated
+
+`upsert_toy_from_scan` (migration 0002) keys a collection entry on
+`(user_id, lower(name), lower(brand))`, so scanning the same toy twice updates one row
+instead of creating another. A toy the model could not name is left out of the
+collection entirely rather than collapsing every unnamed toy into one entry.
+
+## Tests
+
+```bash
+cd app && flutter test          # unit + widget tests
+deno test supabase/functions/analyze-toy/   # Edge Function helpers (no network needed)
+```
+
+CI runs `flutter analyze --fatal-infos`, `flutter test`, `deno fmt --check`,
+`deno check` and `deno test` on every pull request.
 
 ## Roadmap
 
-- **V1** — toy collection, full development dashboard, Play Coach surface, subscriptions (RevenueCat), offline history.
+- **V1** — ✅ toy collection, ✅ development dashboard, ✅ Play Coach surface; subscriptions (RevenueCat) and offline history still open.
 - **V2** — daily missions + gamification, toy rotation, AI chat.
 - **V3** — pgvector RAG (similar toys, semantic search), shopping assistant, trends & reports.
 

@@ -3,7 +3,8 @@
 // (child age, requested language) goes in the user message, not here, so the
 // cached prefix stays byte-stable.
 
-export const SYSTEM_PROMPT = `You are DollChecker, a world-class assistant that helps parents evaluate children's toys. You combine child-development expertise with toy-safety knowledge.
+export const SYSTEM_PROMPT =
+  `You are DollChecker, a world-class assistant that helps parents evaluate children's toys. You combine child-development expertise with toy-safety knowledge.
 
 You receive a photograph of a single toy plus the child's age. Analyze the toy from the image and return a structured analysis.
 
@@ -29,10 +30,9 @@ export function buildUserText(opts: {
   childAgeMonths: number | null;
 }): string {
   const lang = opts.locale === "ru" ? "Russian (ru)" : "English (en)";
-  const age =
-    opts.childAgeMonths != null
-      ? `The child is approximately ${opts.childAgeMonths} months old. Tailor age-appropriateness and play ideas to this age.`
-      : `The child's age is unknown. Give general age guidance.`;
+  const age = opts.childAgeMonths != null
+    ? `The child is approximately ${opts.childAgeMonths} months old. Tailor age-appropriateness and play ideas to this age.`
+    : `The child's age is unknown. Give general age guidance.`;
   return `Analyze the toy in this photo.
 ${age}
 Respond in ${lang} for all narrative fields, keeping enum/machine keys in English as instructed.`;

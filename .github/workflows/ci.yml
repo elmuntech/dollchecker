@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Flutter app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned so a new stable release cannot redden CI on an unrelated PR via
+      # fresh deprecation infos. Bump deliberately.
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      # Also runs gen-l10n, so the generated AppLocalizations exists before
+      # analysis. The generated files are not committed.
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify ARB files are valid JSON
+        run: |
+          for f in lib/l10n/*.arb; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+          done
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test
+
+  functions:
+    name: Edge Functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Format check
+        run: deno fmt --check supabase/functions/
+
+      # index.ts pulls supabase-js from a CDN; the pure modules type-check
+      # without any network fetch, and `deno test` covers them end to end.
+      - name: Type check
+        run: |
+          deno check \
+            supabase/functions/analyze-toy/utils.ts \
+            supabase/functions/analyze-toy/schema.ts \
+            supabase/functions/analyze-toy/prompt.ts \
+            supabase/functions/_shared/cors.ts
+
+      - name: Test
+        run: deno test supabase/functions/analyze-toy/

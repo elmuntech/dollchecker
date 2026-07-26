@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:dollchecker/core/l10n/locale_controller.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
+import 'package:dollchecker/features/collection/data/toy_repository.dart';
+import 'package:dollchecker/features/development/data/development_repository.dart';
+import 'package:dollchecker/features/play/data/play_repository.dart';
+import 'package:dollchecker/features/profile/data/profile_repository.dart';
 import 'package:dollchecker/features/scan/data/scan_repository.dart';
 import 'package:dollchecker/features/scan/domain/toy_analysis.dart';
 
@@ -32,8 +36,13 @@ class ScanController extends StateNotifier<AsyncValue<ScanResult?>> {
             childProfileId: child?.id,
             locale: locale,
           );
-      // Refresh history so the new scan shows up.
+      // A scan feeds every surface: history, the collection entry it folds
+      // into, the development aggregate, the play ideas, and the quota.
       _ref.invalidate(historyProvider);
+      _ref.invalidate(collectionProvider);
+      _ref.invalidate(developmentSummaryProvider);
+      _ref.invalidate(playIdeasProvider);
+      _ref.invalidate(quotaProvider);
       state = AsyncValue.data(result);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

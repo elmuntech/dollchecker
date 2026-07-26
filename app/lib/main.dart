@@ -18,7 +18,9 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
+    // `publishableKey` is the current name for what the dashboard still calls
+    // the anon key — a public client key, safe to ship. RLS protects the data.
+    publishableKey: Env.supabaseAnonKey,
   );
 
   runApp(const ProviderScope(child: DollCheckerApp()));
