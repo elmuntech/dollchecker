@@ -18,6 +18,10 @@ SafetyLevel _safetyFrom(String? s) {
   }
 }
 
+/// Parses a `safety_level` machine value ('green'/'yellow'/'red') coming from
+/// the analyzer or the database.
+SafetyLevel safetyLevelFromKey(String? key) => _safetyFrom(key);
+
 T? _as<T>(Object? v) => v is T ? v : null;
 
 int _int(Object? v, [int fallback = 0]) =>

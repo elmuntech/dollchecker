@@ -82,7 +82,8 @@ export const ANALYSIS_SCHEMA = strObj(
         },
         max_months: {
           type: "integer",
-          description: "Maximum recommended age in months, or 216 (18y) if open-ended.",
+          description:
+            "Maximum recommended age in months, or 216 (18y) if open-ended.",
         },
         label: {
           type: "string",
@@ -94,7 +95,8 @@ export const ANALYSIS_SCHEMA = strObj(
     materials: {
       type: "array",
       items: { type: "string" },
-      description: "Materials, e.g. ['plastic','wood']. English machine values.",
+      description:
+        "Materials, e.g. ['plastic','wood']. English machine values.",
     },
     safety: strObj(
       {
@@ -107,7 +109,10 @@ export const ANALYSIS_SCHEMA = strObj(
           type: "array",
           items: strObj(
             {
-              type: { type: "string", enum: HAZARD_TYPES as unknown as string[] },
+              type: {
+                type: "string",
+                enum: HAZARD_TYPES as unknown as string[],
+              },
               severity: { type: "string", enum: ["low", "medium", "high"] },
               description: {
                 type: "string",
@@ -153,7 +158,8 @@ export const ANALYSIS_SCHEMA = strObj(
         },
         educational_summary: {
           type: "string",
-          description: "Localized: why the score, what it lacks, how to improve.",
+          description:
+            "Localized: why the score, what it lacks, how to improve.",
         },
         skills: {
           type: "array",
@@ -192,7 +198,10 @@ export const ANALYSIS_SCHEMA = strObj(
               description: { type: "string" },
               skills_targeted: {
                 type: "array",
-                items: { type: "string", enum: SKILL_KEYS as unknown as string[] },
+                items: {
+                  type: "string",
+                  enum: SKILL_KEYS as unknown as string[],
+                },
               },
               min_age_months: { type: "integer" },
               duration_minutes: { type: "integer" },
@@ -212,5 +221,12 @@ export const ANALYSIS_SCHEMA = strObj(
       ["ideas"],
     ),
   },
-  ["identification", "age_recommendation", "materials", "safety", "development", "play_coach"],
+  [
+    "identification",
+    "age_recommendation",
+    "materials",
+    "safety",
+    "development",
+    "play_coach",
+  ],
 );
