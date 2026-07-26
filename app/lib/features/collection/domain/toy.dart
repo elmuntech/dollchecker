@@ -13,6 +13,7 @@ class Toy {
     required this.owned,
     required this.scanCount,
     required this.lastScannedAt,
+    required this.lastPlayedAt,
     required this.safety,
     required this.educationalScore,
     required this.lastScanId,
@@ -30,13 +31,17 @@ class Toy {
   final bool owned;
   final int scanCount;
   final DateTime? lastScannedAt;
+
+  /// When a completed mission last used this toy — null means never played.
+  /// This, not `lastScannedAt`, is what toy rotation sorts on.
+  final DateTime? lastPlayedAt;
   final SafetyLevel safety;
   final int? educationalScore;
   final String? lastScanId;
 
   static const columns = 'id, name, brand, category, primary_image_url, owned, '
-      'scan_count, last_scanned_at, latest_safety, latest_educational_score, '
-      'last_scan_id';
+      'scan_count, last_scanned_at, last_played_at, latest_safety, '
+      'latest_educational_score, last_scan_id';
 
   factory Toy.fromRow(Map<String, dynamic> r) => Toy(
         id: r['id'].toString(),
@@ -49,6 +54,9 @@ class Toy {
         lastScannedAt: r['last_scanned_at'] == null
             ? null
             : DateTime.tryParse('${r['last_scanned_at']}')?.toLocal(),
+        lastPlayedAt: r['last_played_at'] == null
+            ? null
+            : DateTime.tryParse('${r['last_played_at']}')?.toLocal(),
         safety: safetyLevelFromKey(r['latest_safety'] as String?),
         educationalScore: r['latest_educational_score'] as int?,
         lastScanId: _nonEmpty(r['last_scan_id']),
@@ -63,6 +71,7 @@ class Toy {
         owned: owned ?? this.owned,
         scanCount: scanCount,
         lastScannedAt: lastScannedAt,
+        lastPlayedAt: lastPlayedAt,
         safety: safety,
         educationalScore: educationalScore,
         lastScanId: lastScanId,
