@@ -13,6 +13,7 @@ import 'package:dollchecker/features/development/presentation/dashboard_screen.d
 import 'package:dollchecker/features/history/presentation/history_screen.dart';
 import 'package:dollchecker/features/home/presentation/home_screen.dart';
 import 'package:dollchecker/features/missions/presentation/missions_screen.dart';
+import 'package:dollchecker/features/parents/presentation/parents_screen.dart';
 import 'package:dollchecker/features/play/presentation/play_screen.dart';
 import 'package:dollchecker/features/scan/presentation/analyzing_screen.dart';
 import 'package:dollchecker/features/scan/presentation/result_screen.dart';
@@ -85,6 +86,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Screens pushed above the shell.
       GoRoute(path: '/analyzing', builder: (_, __) => const AnalyzingScreen()),
       GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
+      GoRoute(path: '/parents', builder: (_, __) => const ParentsScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/children', builder: (_, __) => const ChildrenScreen()),
       GoRoute(

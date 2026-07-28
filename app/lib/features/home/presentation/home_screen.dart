@@ -41,9 +41,12 @@ class HomeScreen extends ConsumerWidget {
         title: Text(child == null ? l.appTitle : l.homeGreeting(child.name)),
         actions: [
           const ChildSwitcherAction(),
+          // The parents panel is the way in to everything grown-up, settings
+          // included — so the app bar carries one door, not two.
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/settings'),
+            icon: const Icon(Icons.supervisor_account_outlined),
+            tooltip: l.parentsPanel,
+            onPressed: () => context.push('/parents'),
           ),
         ],
       ),

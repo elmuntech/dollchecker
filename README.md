@@ -35,6 +35,7 @@ app/                      Flutter application
       collection              toy collection (grid, detail, wishlist)
       missions                daily missions, streaks, toy rotation
       development             skill dashboard (radar, strengths, gaps)
+      parents                 parents panel (household week, safety review, account)
       play                    Play Coach feed + favorites
       profile                 subscription tier and scan quota
       shell                   bottom-navigation shell
@@ -106,6 +107,27 @@ reachable from the bottom navigation bar:
 Households with several children switch child from the app bar; the choice drives the
 dashboard, the Play Coach feed, and the age context sent to the analyzer.
 
+### The parents panel
+
+Every tab above answers "what should we play next?" for one child. The **parents panel**
+— the person icon in the Home app bar, at `/parents` — is the only surface that steps
+back and looks at the household:
+
+- **This week at home** — scans, missions completed and active days across all children
+  over the last 7 days, with an explicit "nothing happened this week" line.
+- **Each child** — one card per child: scans, missions done out of planned, the
+  development index, and a seven-dot strip of the days a mission was completed. Tapping
+  a card makes that child active and opens their development dashboard.
+- **Safety review** — the toys you *own* whose latest analysis came back red or yellow,
+  worst first, then most recently scanned. Wishlist entries are left out: a toy that is
+  not in the house cannot hurt anyone.
+- **Account** — plan and remaining scans, child profiles, and app settings.
+
+The week is assembled from two household-wide queries (scans and missions) plus one
+development aggregate per child. Both queries deliberately over-fetch by a few hours,
+because a date bound in UTC cannot express a local calendar day — `HouseholdReport.build`
+trims the window to local days, so a scan at 23:00 counts for the day the parent made it.
+
 ### How daily missions work
 
 Missions are assembled from the play ideas the analyzer has already produced —
@@ -144,7 +166,7 @@ CI runs `flutter analyze --fatal-infos`, `flutter test`, `deno fmt --check`,
 ## Roadmap
 
 - **V1** — ✅ toy collection, ✅ development dashboard, ✅ Play Coach surface; subscriptions (RevenueCat) and offline history still open.
-- **V2** — ✅ daily missions + gamification, ✅ toy rotation; AI chat still open.
+- **V2** — ✅ daily missions + gamification, ✅ toy rotation, ✅ parents panel; AI chat still open.
 - **V3** — pgvector RAG (similar toys, semantic search), shopping assistant, trends & reports.
 
 ## Safety disclaimer

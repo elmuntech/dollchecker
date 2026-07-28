@@ -211,5 +211,22 @@
   "toyRotationHint": "Toys that have not been played with in a while. Rotating toys keeps them interesting.",
   "neverPlayed": "Not played yet",
   "lastPlayed": "Last played {date}",
-  "@lastPlayed": { "placeholders": { "date": {} } }
+  "@lastPlayed": { "placeholders": { "date": {} } },
+
+  "parentsPanel": "Parents panel",
+  "parentsWeekTitle": "This week at home",
+  "parentsQuiet": "No scans and no missions in the last 7 days.",
+  "parentsChildrenTitle": "Each child",
+  "childNoMissions": "No missions this week",
+  "statScans": "Scans",
+  "statMissions": "Missions",
+  "statActiveDays": "Active days",
+
+  "safetyReview": "Safety review",
+  "safetyReviewHint": "Toys you own whose latest analysis was not green. Re-check them or put them away.",
+  "safetyReviewEmpty": "Nothing to review — every toy you own scanned green.",
+  "needsAttention": "{count, plural, =1{1 toy needs attention} other{{count} toys need attention}}",
+  "@needsAttention": { "placeholders": { "count": { "type": "int" } } },
+
+  "account": "Account"
 }

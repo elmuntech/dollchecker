@@ -195,5 +195,21 @@
   "toyRotation": "Пора достать снова",
   "toyRotationHint": "Игрушки, с которыми давно не играли. Ротация возвращает к ним интерес.",
   "neverPlayed": "Ещё не играли",
-  "lastPlayed": "Играли: {date}"
+  "lastPlayed": "Играли: {date}",
+
+  "parentsPanel": "Родительская панель",
+  "parentsWeekTitle": "Эта неделя дома",
+  "parentsQuiet": "За последние 7 дней не было ни сканов, ни миссий.",
+  "parentsChildrenTitle": "По детям",
+  "childNoMissions": "На этой неделе миссий не было",
+  "statScans": "Сканы",
+  "statMissions": "Миссии",
+  "statActiveDays": "Активных дней",
+
+  "safetyReview": "Проверка безопасности",
+  "safetyReviewHint": "Ваши игрушки, у которых последний анализ был не зелёным. Проверьте их снова или уберите.",
+  "safetyReviewEmpty": "Проверять нечего — все ваши игрушки получили зелёную оценку.",
+  "needsAttention": "{count, plural, =1{1 игрушка требует внимания} few{{count} игрушки требуют внимания} many{{count} игрушек требуют внимания} other{{count} игрушек требуют внимания}}",
+
+  "account": "Аккаунт"
 }
