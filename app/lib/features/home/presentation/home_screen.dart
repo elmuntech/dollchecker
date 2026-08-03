@@ -91,6 +91,13 @@ class HomeScreen extends ConsumerWidget {
                       if (quota != null) ...[
                         const SizedBox(height: 12),
                         QuotaLine(quota: quota),
+                        // Only free accounts see a way to upgrade, and only the
+                        // exhausted ones see it as the obvious next step.
+                        if (!quota.isPremium)
+                          TextButton(
+                            onPressed: () => context.push('/paywall'),
+                            child: Text(l.upgrade),
+                          ),
                       ],
                     ],
                   ),

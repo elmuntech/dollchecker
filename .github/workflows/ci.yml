@@ -66,6 +66,8 @@ jobs:
             supabase/functions/analyze-toy/schema.ts \
             supabase/functions/analyze-toy/prompt.ts \
             supabase/functions/delete-account/utils.ts \
+            supabase/functions/polar-billing/utils.ts \
+            supabase/functions/polar-webhook/utils.ts \
             supabase/functions/_shared/cors.ts
 
       - name: Test
