@@ -128,10 +128,18 @@ class LocalReminderScheduler implements ReminderScheduler {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       // The time the parent picked is a wall-clock time, not an instant: 18:00
       // means 18:00 wherever they are, including after a timezone change.
+      // Said twice because two different mechanisms deliver it.
+      //
+      // This argument is the legacy iOS one (`UILocalNotification`, iOS 9 and
+      // earlier) and is inert on every version the plugin still supports. It
+      // is required by the signature, so it is set to the value that matches
+      // the intent rather than one that contradicts it — a reader should not
+      // have to know it is vestigial to trust the line above.
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      // Same wall-clock time every day, which is what a parent means by "18:00"
-      // even across a daylight-saving change.
+          UILocalNotificationDateInterpretation.wallClockTime,
+      // This is the one that actually delivers it: matching only the time
+      // component repeats at the same clock time every day, across a timezone
+      // move and across a daylight-saving change alike.
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

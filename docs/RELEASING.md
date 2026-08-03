@@ -116,8 +116,26 @@ camera and photo usage strings, and the `dollchecker://` URL type. Read
 [`store/submission-checklist.md`](../store/submission-checklist.md) §0 before
 submitting to iOS — the payments question is unresolved there, not here.
 
+## Reproducible builds — commit the lockfile
+
+`app/pubspec.lock` is tracked (it is an application, not a library), but it can
+only be produced by a resolver, so it is not in the repository yet. Get one
+either way:
+
+```bash
+cd app && flutter pub get     # writes app/pubspec.lock
+git add app/pubspec.lock && git commit -m "Pin the resolved dependency set"
+```
+
+or download the `pubspec-lock` artifact from any CI run on `main` and commit
+that. Until it exists, every build re-resolves — which is how a dependency
+once moved a major version underneath us between two CI runs and broke the
+build.
+
 ## Before you tag
 
+- [ ] `app/pubspec.lock` committed, and regenerated deliberately rather than
+      by accident
 - [ ] CI green on `main`
 - [ ] Version name **and** code bumped
 - [ ] Backend deployed and smoke-tested with a real account

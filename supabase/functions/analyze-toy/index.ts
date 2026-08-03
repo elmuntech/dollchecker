@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       if (error) console.error("quota refund failed", error.message);
     };
 
-    // --- 4. Child age context --------------------------------------------
+    // --- 5. Child age context --------------------------------------------
     let childAgeMonths: number | null = null;
     if (childProfileId) {
       const { data: child } = await admin
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
       if (child?.birth_date) childAgeMonths = monthsSince(child.birth_date);
     }
 
-    // --- 5. Store image ---------------------------------------------------
+    // --- 6. Store image ---------------------------------------------------
     const objectPath = toyImagePath(user.id, mediaType, crypto.randomUUID());
     const bytes = base64ToBytes(body.image_base64);
     const { error: uploadErr } = await admin.storage
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     if (uploadErr) console.error("upload failed", uploadErr.message);
     const imageUrl = uploadErr ? null : objectPath; // signed URLs generated on read
 
-    // --- 6. Claude Vision call (forced JSON schema) ----------------------
+    // --- 7. Claude Vision call (forced JSON schema) ----------------------
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
     // A refusal or unparseable answer still cost a model call, so the quota is
     // not refunded past this point — only a failure to reach the model is.
 
-    // --- 7. Persist -------------------------------------------------------
+    // --- 8. Persist -------------------------------------------------------
     const { data: scan, error: scanErr } = await admin
       .from("scans")
       .insert({
@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- 8. Fold into the toy collection ----------------------------------
+    // --- 9. Fold into the toy collection ----------------------------------
     // An unidentifiable toy yields a null identity and gets no collection
     // entry, so the grid never fills with nameless duplicates.
     let toyId: string | null = null;

@@ -4,7 +4,11 @@ app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/build/
 app/.packages
-app/pubspec.lock
+# NOTE: app/pubspec.lock is deliberately NOT ignored. DollChecker is an
+# application, not a library: the whole point of a lockfile is that the build
+# that ships is the build that was tested. Leaving it untracked has already
+# cost us once — a dependency resolved differently between two CI runs and
+# broke the build with an argument that had been removed in a major version.
 **/*.g.dart
 **/*.freezed.dart
 app/lib/l10n/app_localizations*.dart
