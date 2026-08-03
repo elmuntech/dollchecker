@@ -78,7 +78,9 @@ item has to be applied once when the release project is set up.
 | Deep-link scheme `dollchecker://` | `AndroidManifest.xml` intent-filter + iOS `CFBundleURLTypes` | Password reset, checkout return |
 | `<queries><intent>` for `https` | `AndroidManifest.xml` | Opening privacy/terms links on Android 11+ |
 | Camera + photo-library usage strings | `Info.plist` (`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`) | iOS scanning (app crashes without them) |
-| Notification permission | `AndroidManifest.xml` `POST_NOTIFICATIONS`, iOS capability | Mission reminders |
+| `POST_NOTIFICATIONS` permission + `SCHEDULE_EXACT_ALARM` not needed (inexact scheduling is used deliberately) | `AndroidManifest.xml` | Daily reminders on Android 13+ |
+| Notification icon `@mipmap/ic_launcher` present (default from `flutter create`) | `android/app/src/main/res` | Android reminder rendering |
+| Notification capability + `UNUserNotificationCenter` delegate (added by the plugin) | Xcode | iOS reminders |
 | Release signing (keystore, provisioning profiles) | `android/key.properties`, Xcode | Any release build |
 
 ## 5. Optional / later
@@ -87,5 +89,5 @@ item has to be applied once when the release project is set up.
 |------|---------|--------|
 | Sentry DSN | Crash reporting | ⬜ |
 | Analytics key (PostHog / Firebase) | Funnel + retention | ⬜ |
-| FCM / APNs keys | Remote push (local reminders need no keys) | ⬜ |
+| FCM / APNs keys | Remote push only — the shipped daily reminder is local and needs no keys | ⬜ |
 | Toy recall data source | Real recall checks instead of AI-only guidance | ⬜ |

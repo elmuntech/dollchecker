@@ -265,5 +265,11 @@
   "manageSubscription": "Управление подпиской",
   "premiumActive": "Premium активен",
   "renewsOn": "Продление {date}",
-  "portalFailed": "Не удалось открыть страницу подписки."
+  "portalFailed": "Не удалось открыть страницу подписки.",
+  "reminders": "Напоминания",
+  "dailyReminder": "Ежедневное напоминание",
+  "dailyReminderHint": "Одно напоминание в день о миссиях",
+  "reminderTime": "Время напоминания",
+  "reminderTitle": "Пора играть",
+  "reminderBody": "Миссии на сегодня ждут в DollChecker."
 }

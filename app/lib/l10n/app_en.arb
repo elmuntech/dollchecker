@@ -286,5 +286,11 @@
   "premiumActive": "Premium is active",
   "renewsOn": "Renews {date}",
   "@renewsOn": { "placeholders": { "date": {} } },
-  "portalFailed": "Could not open the subscription page."
+  "portalFailed": "Could not open the subscription page.",
+  "reminders": "Reminders",
+  "dailyReminder": "Daily reminder",
+  "dailyReminderHint": "One nudge a day about today's missions",
+  "reminderTime": "Reminder time",
+  "reminderTitle": "Time to play",
+  "reminderBody": "Today's missions are waiting in DollChecker."
 }

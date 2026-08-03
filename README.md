@@ -36,6 +36,8 @@ app/                      Flutter application
       missions                daily missions, streaks, toy rotation
       development             skill dashboard (radar, strengths, gaps)
       parents                 parents panel (household week, safety review, account)
+      billing                 Polar paywall, checkout and portal
+      reminders               daily local notification (schedule, permission, settings)
       play                    Play Coach feed + favorites
       profile                 subscription tier and scan quota
       shell                   bottom-navigation shell
@@ -139,6 +141,23 @@ The week is assembled from two household-wide queries (scans and missions) plus 
 development aggregate per child. Both queries deliberately over-fetch by a few hours,
 because a date bound in UTC cannot express a local calendar day — `HouseholdReport.build`
 trims the window to local days, so a scan at 23:00 counts for the day the parent made it.
+
+### Reminders
+
+The mission loop only works if something brings the parent back, so the app can post
+one daily notification.
+
+- **Local, not push.** `flutter_local_notifications` schedules it on the device: no
+  FCM/APNs account, no server, and it still fires offline. The trade-off is that a
+  reminder belongs to one device — which is also where the setting is stored.
+- Permission is requested when the switch is turned on, not at first launch where the
+  prompt would have no context. A refusal leaves the switch **off**: showing it on while
+  the system will never deliver anything promises something the app cannot keep.
+- The notification carries its own text, so changing language re-arms tomorrow's
+  reminder rather than leaving it in the old one.
+- `ReminderSchedule` is a pure value: `nextOccurrence` never schedules "now" (that would
+  fire once and then never again today), and a corrupted preference decodes to the
+  default instead of throwing on startup.
 
 ### Subscriptions
 
