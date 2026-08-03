@@ -14,8 +14,14 @@ without:
   * `dollchecker://` scheme   — password-reset and checkout return links
   * core library desugaring   — required by flutter_local_notifications
   * camera / photo usage text — iOS crashes on first scan without them
+  * application id + display name — `flutter create` leaves `com.example.…`,
+    which the stores reject, and which cannot be changed after the first upload
 
-Usage:  python3 tool/configure_platform.py app
+Release builds additionally need a signing config, which is opt-in
+(`--release-signing`) so that a debug build without a keystore is unaffected.
+
+Usage:  python3 tool/configure_platform.py app [--app-id com.dollchecker.app]
+                                               [--release-signing]
 """
 
 from __future__ import annotations
@@ -28,6 +34,11 @@ from pathlib import Path
 ANDROID_NS = "http://schemas.android.com/apk/res/android"
 DEEP_LINK_SCHEME = "dollchecker"
 DESUGAR_VERSION = "2.1.4"
+
+# The store identity. Both stores treat this as permanent: it cannot be changed
+# after the first upload, on either platform. Decide before publishing.
+DEFAULT_APP_ID = "com.dollchecker.app"
+DISPLAY_NAME = "DollChecker"
 
 ET.register_namespace("android", ANDROID_NS)
 
@@ -62,6 +73,11 @@ def patch_manifest(path: Path) -> list[str]:
         data.set(_android("scheme"), "https")
         manifest.append(queries)
         changes.append("<queries> for https")
+
+    application = manifest.find("application")
+    if application is not None and application.get(_android("label")) != DISPLAY_NAME:
+        application.set(_android("label"), DISPLAY_NAME)
+        changes.append(f'label "{DISPLAY_NAME}"')
 
     activity = manifest.find("./application/activity")
     if activity is None:
@@ -138,6 +154,124 @@ dependencies {{
     return [f"core library desugaring ({path.name})"]
 
 
+def patch_application_id(app_dir: Path, app_id: str) -> list[str]:
+    """Replaces the `com.example.…` application id `flutter create` generates.
+
+    Only `applicationId` is touched, never `namespace`: the namespace has to
+    match the package the generated Kotlin source lives in, and renaming one
+    without moving the other stops the build.
+    """
+    kts = app_dir / "build.gradle.kts"
+    groovy = app_dir / "build.gradle"
+    path = kts if kts.exists() else groovy
+    body = path.read_text()
+
+    patched = re.sub(
+        r'(applicationId\s*=?\s*)"[^"]*"',
+        lambda m: f'{m.group(1)}"{app_id}"',
+        body,
+    )
+    if patched == body:
+        return []
+    path.write_text(patched)
+    return [f"applicationId {app_id}"]
+
+
+def patch_ios_bundle_id(project_file: Path, app_id: str) -> list[str]:
+    """Same for iOS, where the id lives in the Xcode project file."""
+    body = project_file.read_text()
+    patched = re.sub(
+        r"(PRODUCT_BUNDLE_IDENTIFIER = )[^;]*;",
+        lambda m: f"{m.group(1)}{app_id};",
+        body,
+    )
+    # The Runner tests target appends `.RunnerTests`, which the blanket replace
+    # above would have flattened onto the app id.
+    patched = patched.replace(
+        f"PRODUCT_BUNDLE_IDENTIFIER = {app_id};\n\t\t\t\tPRODUCT_NAME = \"$(TARGET_NAME)\";\n\t\t\t\tTEST_HOST",
+        f"PRODUCT_BUNDLE_IDENTIFIER = {app_id}.RunnerTests;\n\t\t\t\tPRODUCT_NAME = \"$(TARGET_NAME)\";\n\t\t\t\tTEST_HOST",
+    )
+    if patched == body:
+        return []
+    project_file.write_text(patched)
+    return [f"iOS bundle id {app_id}"]
+
+
+SIGNING_KTS = """
+
+// Added by tool/configure_platform.py — release signing from key.properties.
+// Absent keystore = untouched debug behaviour, so a local build still works.
+val dollcheckerKeystore = rootProject.file("key.properties")
+val dollcheckerKeyProps = java.util.Properties().apply {
+    if (dollcheckerKeystore.exists()) {
+        java.io.FileInputStream(dollcheckerKeystore).use { load(it) }
+    }
+}
+
+android {
+    signingConfigs {
+        create("release") {
+            if (dollcheckerKeystore.exists()) {
+                keyAlias = dollcheckerKeyProps["keyAlias"] as String
+                keyPassword = dollcheckerKeyProps["keyPassword"] as String
+                storeFile = file(dollcheckerKeyProps["storeFile"] as String)
+                storePassword = dollcheckerKeyProps["storePassword"] as String
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            if (dollcheckerKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+}
+"""
+
+SIGNING_GROOVY = """
+
+// Added by tool/configure_platform.py — release signing from key.properties.
+def dollcheckerKeystore = rootProject.file("key.properties")
+def dollcheckerKeyProps = new Properties()
+if (dollcheckerKeystore.exists()) {
+    dollcheckerKeystore.withInputStream { dollcheckerKeyProps.load(it) }
+}
+
+android {
+    signingConfigs {
+        release {
+            if (dollcheckerKeystore.exists()) {
+                keyAlias dollcheckerKeyProps['keyAlias']
+                keyPassword dollcheckerKeyProps['keyPassword']
+                storeFile file(dollcheckerKeyProps['storeFile'])
+                storePassword dollcheckerKeyProps['storePassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (dollcheckerKeystore.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+"""
+
+
+def patch_release_signing(app_dir: Path) -> list[str]:
+    """Signs release builds with the keystore named in `key.properties`."""
+    kts = app_dir / "build.gradle.kts"
+    groovy = app_dir / "build.gradle"
+    path = kts if kts.exists() else groovy
+    body = path.read_text()
+    if "dollcheckerKeystore" in body:
+        return []
+    path.write_text(body + (SIGNING_KTS if path.suffix == ".kts" else SIGNING_GROOVY))
+    return ["release signing config"]
+
+
 IOS_KEYS = {
     "NSCameraUsageDescription":
         "DollChecker uses the camera to photograph a toy for analysis.",
@@ -157,6 +291,12 @@ def patch_info_plist(path: Path) -> list[str]:
             continue
         additions += f"\t<key>{key}</key>\n\t<string>{description}</string>\n"
         changes.append(key)
+
+    if "CFBundleDisplayName" not in body:
+        additions += (
+            f"\t<key>CFBundleDisplayName</key>\n\t<string>{DISPLAY_NAME}</string>\n"
+        )
+        changes.append("CFBundleDisplayName")
 
     if "CFBundleURLTypes" not in body:
         additions += (
@@ -183,19 +323,28 @@ def patch_info_plist(path: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    root = Path(argv[1] if len(argv) > 1 else "app")
+    args = [a for a in argv[1:] if not a.startswith("--")]
+    flags = {a.split("=")[0]: a.partition("=")[2] for a in argv[1:] if a.startswith("--")}
+    root = Path(args[0] if args else "app")
+    app_id = flags.get("--app-id") or DEFAULT_APP_ID
     applied: list[str] = []
 
     manifest = root / "android/app/src/main/AndroidManifest.xml"
     if manifest.exists():
         applied += patch_manifest(manifest)
         applied += patch_gradle(root / "android/app")
+        applied += patch_application_id(root / "android/app", app_id)
+        if "--release-signing" in flags:
+            applied += patch_release_signing(root / "android/app")
     else:
         print(f"skipping Android: {manifest} not generated")
 
     plist = root / "ios/Runner/Info.plist"
     if plist.exists():
         applied += patch_info_plist(plist)
+        project = root / "ios/Runner.xcodeproj/project.pbxproj"
+        if project.exists():
+            applied += patch_ios_bundle_id(project, app_id)
     else:
         print(f"skipping iOS: {plist} not generated")
 

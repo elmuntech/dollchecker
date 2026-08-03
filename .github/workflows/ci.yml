@@ -73,6 +73,13 @@ jobs:
       - name: Apply platform configuration
         run: python3 ../tool/configure_platform.py .
 
+      # Also proves the flutter_launcher_icons config and the generated artwork
+      # still produce a valid icon set.
+      - name: Launcher icons
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+
       # Debug rather than release: signing keys are not in CI. This still
       # compiles every plugin's native code, which `flutter test` never does.
       - name: Build debug APK

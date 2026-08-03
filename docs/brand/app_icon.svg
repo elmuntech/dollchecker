@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- DollChecker app icon. Regenerate the PNGs with tool/make_icon.py, or
+       replace both PNGs with a designer's artwork and drop this file. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4C6EF5"/>
+      <stop offset="100%" stop-color="#364FC7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="229" fill="url(#bg)"/>
+  <g fill="#FFF6E9">
+    <circle cx="315" cy="293" r="101"/>
+    <circle cx="709" cy="293" r="101"/>
+    <circle cx="512" cy="481" r="241"/>
+  </g>
+  <g fill="#E8D5BC">
+    <circle cx="315" cy="293" r="50"/>
+    <circle cx="709" cy="293" r="50"/>
+    <circle cx="512" cy="563" r="106"/>
+  </g>
+  <g fill="#2A2F45">
+    <circle cx="512" cy="532" r="39"/>
+    <circle cx="427" cy="438" r="27"/>
+    <circle cx="597" cy="438" r="27"/>
+  </g>
+  <circle cx="753" cy="717" r="184" fill="url(#bg)"/>
+  <circle cx="753" cy="717" r="159" fill="#2E7D32"/>
+  <path d="M681 720 L737 780 L828 658" fill="none" stroke="#FFFFFF"
+        stroke-width="49" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

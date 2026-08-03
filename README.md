@@ -58,6 +58,10 @@ supabase/
   functions/polar-webhook/index.ts            Polar events → account tier (only writer)
 docs/INTEGRATIONS.md      third-party setup still to be wired (keys, URLs, store accounts)
 tool/configure_platform.py  applies manifest / gradle / plist config to a generated project
+tool/make_icon.py         draws the app icon (no design tool needed)
+store/                    listings, data-safety and content-rating answers, submission checklist
+docs/legal/               privacy policy, terms, refund policy — ready to publish
+docs/RELEASING.md         versioning, signing, the tag-driven release workflow
 .github/workflows/ci.yml  analyze + test, Flutter and Deno
 ```
 
@@ -94,8 +98,11 @@ $EDITOR .env
 flutter create --platforms=android,ios --project-name dollchecker .
 
 # Apply the platform configuration the app needs (permissions, deep link,
-# desugaring, iOS usage strings). Idempotent — safe to re-run:
+# desugaring, application id, iOS usage strings). Idempotent — safe to re-run:
 python3 ../tool/configure_platform.py .
+
+# Launcher icons, from the artwork in assets/icon/:
+dart run flutter_launcher_icons
 
 flutter pub get        # also runs gen-l10n (generate: true in pubspec)
 flutter run
@@ -260,6 +267,13 @@ template. The APK is uploaded as a build artifact.
 - **V1** — ✅ toy collection, ✅ development dashboard, ✅ Play Coach surface; subscriptions (RevenueCat) and offline history still open.
 - **V2** — ✅ daily missions + gamification, ✅ toy rotation, ✅ parents panel, ✅ AI chat.
 - **V3** — pgvector RAG (similar toys, semantic search), shopping assistant, trends & reports.
+
+## Releasing
+
+`docs/RELEASING.md` covers versioning, the upload key and the tag-driven
+workflow that produces a signed `.aab`. `store/submission-checklist.md` covers
+everything around it — backend, payments, legal pages, listings, review notes —
+and marks which items need an account only you have.
 
 ## Safety disclaimer
 

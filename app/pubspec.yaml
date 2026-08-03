@@ -43,6 +43,20 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  # Generates the launcher icons from assets/icon/. Run after `flutter create`:
+  #   dart run flutter_launcher_icons
+  flutter_launcher_icons: ">=0.13.0 <0.15.0"
+
+# Source artwork lives in assets/icon/ and is read by the generator above, not
+# bundled into the app — nothing loads it at runtime.
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  android: "ic_launcher"
+  adaptive_icon_background: "#4C6EF5"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  ios: true
+  # iOS rejects an icon with an alpha channel.
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
