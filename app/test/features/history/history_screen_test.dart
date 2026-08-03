@@ -49,14 +49,15 @@ void main() {
     expect(find.textContaining('No scans yet'), findsOneWidget);
   });
 
-  testWidgets('shows a footer while more pages remain', (tester) async {
-    // A full page means the list continues, so the footer is the promise that
-    // scrolling will fetch it.
+  testWidgets('offers the next page while more remains', (tester) async {
+    // Idle, not loading — so the footer is a button, not a spinner claiming
+    // the app is busy.
     await pumpHistory(
       tester,
       PagedList(items: [scan('1')], hasMore: true),
     );
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Load more'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('no footer once the list has ended', (tester) async {
@@ -64,7 +65,20 @@ void main() {
       tester,
       PagedList(items: [scan('1')], hasMore: false),
     );
+    expect(find.text('Load more'), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('tapping the footer asks for the next page', (tester) async {
+    final stub = _StubHistory(PagedList(items: [scan('1')], hasMore: true));
+    await pumpApp(
+      tester,
+      const HistoryScreen(),
+      overrides: [historyPageProvider.overrideWith(() => stub)],
+    );
+    await tester.tap(find.text('Load more'));
+    await tester.pumpAndSettle();
+    expect(stub.loadMoreCalls, 1);
   });
 
   testWidgets('a failure offers a retry instead of an empty screen',
@@ -85,8 +99,13 @@ class _StubHistory extends HistoryPageController {
   _StubHistory(this._page);
   final PagedList<ScanSummary> _page;
 
+  int loadMoreCalls = 0;
+
   @override
   Future<PagedList<ScanSummary>> build() async => _page;
+
+  @override
+  Future<void> loadMore() async => loadMoreCalls++;
 }
 
 class _FailingHistory extends HistoryPageController {

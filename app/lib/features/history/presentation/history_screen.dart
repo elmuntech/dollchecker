@@ -66,7 +66,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   // One extra row for the footer while more is on its way.
                   itemCount: page.length + (page.hasMore ? 1 : 0),
                   itemBuilder: (context, i) {
-                    if (i >= page.length) return const _LoadingMoreFooter();
+                    if (i >= page.length) {
+                      return _LoadMoreFooter(
+                        loading: page.isLoadingMore,
+                        onLoadMore: () =>
+                            ref.read(historyPageProvider.notifier).loadMore(),
+                      );
+                    }
                     return _HistoryRow(scan: page.items[i]);
                   },
                 ),
@@ -97,19 +103,31 @@ class _HistoryRow extends StatelessWidget {
   }
 }
 
-class _LoadingMoreFooter extends StatelessWidget {
-  const _LoadingMoreFooter();
+/// The end of the list while more remains.
+///
+/// A spinner only while a page is actually in flight — one that turns whenever
+/// there is more to fetch would claim the app is working when it is idle. The
+/// rest of the time it is a button, which also covers the case where the scroll
+/// listener never fires because everything already fits on screen.
+class _LoadMoreFooter extends StatelessWidget {
+  const _LoadMoreFooter({required this.loading, required this.onLoadMore});
+
+  final bool loading;
+  final VoidCallback onLoadMore;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 24),
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
-        child: SizedBox(
-          height: 24,
-          width: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+        child: loading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : TextButton(onPressed: onLoadMore, child: Text(l.loadMore)),
       ),
     );
   }
