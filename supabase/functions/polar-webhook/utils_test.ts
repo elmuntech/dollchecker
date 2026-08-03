@@ -4,12 +4,24 @@ import { deepStrictEqual } from "node:assert/strict";
 import {
   constantTimeEquals,
   decodeWebhookSecret,
+  expectedSignature,
   extractSubscription,
   isFreshTimestamp,
   parseSignatures,
   signedPayload,
   tierForStatus,
 } from "./utils.ts";
+
+// The Standard Webhooks reference vector. Checking against a number computed
+// elsewhere is the point: a test that compares our signature to our own
+// signature passes just as happily when we sign the wrong bytes.
+const VECTOR = {
+  secret: "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+  id: "msg_p5jXN8AQM9LWM0D4loKWxJek",
+  timestamp: "1614265330",
+  body: '{"test": 2432232314}',
+  signature: "g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=",
+};
 
 const decoder = new TextDecoder();
 
@@ -148,4 +160,85 @@ Deno.test("extractSubscription ignores events with no subscription", () => {
   deepStrictEqual(extractSubscription({ type: "subscription.active" }), null);
   deepStrictEqual(extractSubscription(null), null);
   deepStrictEqual(extractSubscription("nope"), null);
+});
+
+Deno.test("the MAC matches the Standard Webhooks vector", async () => {
+  const sig = await expectedSignature(
+    VECTOR.secret,
+    VECTOR.id,
+    VECTOR.timestamp,
+    VECTOR.body,
+  );
+  deepStrictEqual(sig, VECTOR.signature);
+});
+
+Deno.test("the whsec_ prefix is stripped from the secret", async () => {
+  const withPrefix = await expectedSignature(
+    VECTOR.secret,
+    VECTOR.id,
+    VECTOR.timestamp,
+    VECTOR.body,
+  );
+  const without = await expectedSignature(
+    VECTOR.secret.slice("whsec_".length),
+    VECTOR.id,
+    VECTOR.timestamp,
+    VECTOR.body,
+  );
+  deepStrictEqual(withPrefix, without);
+});
+
+Deno.test("every signed field actually changes the MAC", async () => {
+  // The failure this guards against is silent: a signature that covered only
+  // the id and timestamp would verify happily while the body was rewritten,
+  // and the body is what says who has paid.
+  const base = await expectedSignature(
+    VECTOR.secret,
+    VECTOR.id,
+    VECTOR.timestamp,
+    VECTOR.body,
+  );
+
+  const variants = await Promise.all([
+    expectedSignature(
+      VECTOR.secret,
+      "msg_other",
+      VECTOR.timestamp,
+      VECTOR.body,
+    ),
+    expectedSignature(VECTOR.secret, VECTOR.id, "1614265331", VECTOR.body),
+    expectedSignature(VECTOR.secret, VECTOR.id, VECTOR.timestamp, "{}"),
+    expectedSignature("whsec_" + btoa("another secret"), VECTOR.id,
+      VECTOR.timestamp, VECTOR.body),
+  ]);
+
+  for (const variant of variants) {
+    deepStrictEqual(variant === base, false);
+  }
+  // All four differ from each other too, not merely from the base.
+  deepStrictEqual(new Set([base, ...variants]).size, 5);
+});
+
+Deno.test("a real header verifies, a rewritten body does not", async () => {
+  // End to end over the pieces the handler composes: parse the header, then
+  // compare in constant time against what we compute.
+  const header = `v1,${VECTOR.signature}`;
+  const parsed = parseSignatures(header);
+
+  const expected = await expectedSignature(
+    VECTOR.secret,
+    VECTOR.id,
+    VECTOR.timestamp,
+    VECTOR.body,
+  );
+  deepStrictEqual(parsed.some((s) => constantTimeEquals(s, expected)), true);
+
+  // The same delivery with the body swapped after signing must not verify.
+  const tampered = await expectedSignature(
+    VECTOR.secret,
+    VECTOR.id,
+    VECTOR.timestamp,
+    '{"test": 9999999999}',
+  );
+  deepStrictEqual(parsed.some((s) => constantTimeEquals(s, tampered)), false);
 });

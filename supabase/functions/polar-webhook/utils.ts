@@ -35,6 +35,47 @@ export function signedPayload(
   return `${id}.${timestamp}.${body}`;
 }
 
+/** HMAC-SHA256 of `payload` under `key`, base64 — the Standard Webhooks MAC. */
+export async function hmacSha256Base64(
+  key: Uint8Array,
+  payload: string,
+): Promise<string> {
+  const imported = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign(
+    "HMAC",
+    imported,
+    new TextEncoder().encode(payload),
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(mac)));
+}
+
+/**
+ * The signature a delivery must carry to be ours.
+ *
+ * Lives here rather than in the handler so it can be tested: this is the only
+ * thing standing between anyone on the internet and the column that decides
+ * who has paid. A bug that rejects valid deliveries is loud — subscriptions
+ * silently stop applying — but a bug that signs the wrong bytes is not, and
+ * that is the one worth a known-answer test.
+ */
+export function expectedSignature(
+  secret: string,
+  id: string,
+  timestamp: string,
+  body: string,
+): Promise<string> {
+  return hmacSha256Base64(
+    decodeWebhookSecret(secret),
+    signedPayload(id, timestamp, body),
+  );
+}
+
 /**
  * Signatures from the `webhook-signature` header. The header carries one or
  * more space-separated `v{n},{base64}` pairs — several while a secret is being

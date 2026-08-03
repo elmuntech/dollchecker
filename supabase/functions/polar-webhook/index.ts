@@ -13,11 +13,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   constantTimeEquals,
-  decodeWebhookSecret,
+  expectedSignature,
   extractSubscription,
   isFreshTimestamp,
   parseSignatures,
-  signedPayload,
 } from "./utils.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -29,23 +28,6 @@ const json = (status: number, body: unknown) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
-
-/** HMAC-SHA256 of `payload` under `secret`, base64 — the Standard Webhooks MAC. */
-async function sign(secret: Uint8Array, payload: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    secret,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(payload),
-  );
-  return btoa(String.fromCharCode(...new Uint8Array(mac)));
-}
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
@@ -73,9 +55,11 @@ Deno.serve(async (req) => {
     return json(400, { error: "stale_timestamp" });
   }
 
-  const expected = await sign(
-    decodeWebhookSecret(WEBHOOK_SECRET),
-    signedPayload(id, timestamp!, body),
+  const expected = await expectedSignature(
+    WEBHOOK_SECRET,
+    id,
+    timestamp!,
+    body,
   );
   if (!signatures.some((sig) => constantTimeEquals(sig, expected))) {
     return json(401, { error: "bad_signature" });
