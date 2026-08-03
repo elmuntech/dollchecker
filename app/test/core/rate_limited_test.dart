@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:dollchecker/features/scan/data/scan_repository.dart';
+import 'package:dollchecker/core/errors/rate_limited.dart';
 
 void main() {
   group('rateLimitedFrom', () {

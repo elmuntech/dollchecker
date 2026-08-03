@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:dollchecker/core/config/env.dart';
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/billing/data/billing_repository.dart';
 import 'package:dollchecker/features/profile/data/profile_repository.dart';
@@ -15,7 +16,15 @@ final priceLabelProvider =
 
 /// Where the paywall is in its one long step: the purchase happens in a
 /// browser, so the app can only wait for the upgrade to land.
-enum _Stage { idle, opening, waiting, unavailable, failed, timedOut }
+enum _Stage {
+  idle,
+  opening,
+  waiting,
+  unavailable,
+  rateLimited,
+  failed,
+  timedOut,
+}
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -36,6 +45,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       url = await billing.checkoutUrl();
     } on BillingUnavailableException {
       if (mounted) setState(() => _stage = _Stage.unavailable);
+      return;
+    } on RateLimitedException {
+      // The purchase did not fail — it was asked for too fast. Saying
+      // "checkout failed" would send the user straight back into the limit.
+      if (mounted) setState(() => _stage = _Stage.rateLimited);
       return;
     } catch (_) {
       if (mounted) setState(() => _stage = _Stage.failed);
@@ -171,6 +185,7 @@ class _StageMessage extends StatelessWidget {
       _Stage.opening => (null, false),
       _Stage.waiting => (l.premiumWaiting, false),
       _Stage.unavailable => (l.premiumUnavailable, false),
+      _Stage.rateLimited => (l.rateLimited, false),
       _Stage.failed => (l.premiumFailed, true),
       _Stage.timedOut => (l.premiumPending, false),
     };

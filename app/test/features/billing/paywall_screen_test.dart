@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/billing/data/billing_repository.dart';
 import 'package:dollchecker/features/billing/presentation/paywall_screen.dart';
@@ -12,12 +13,14 @@ class FakeBillingRepository implements BillingRepository {
   FakeBillingRepository({
     this.url = 'https://polar.sh/checkout/x',
     this.unavailable = false,
+    this.rateLimited = false,
     this.fails = false,
     this.upgraded = true,
   });
 
   final String url;
   final bool unavailable;
+  final bool rateLimited;
   final bool fails;
   final bool upgraded;
 
@@ -28,6 +31,7 @@ class FakeBillingRepository implements BillingRepository {
   Future<String> checkoutUrl() async {
     checkoutCalls++;
     if (unavailable) throw BillingUnavailableException();
+    if (rateLimited) throw const RateLimitedException(30);
     if (fails) throw BillingFailedException();
     return url;
   }
@@ -147,6 +151,23 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Check again'));
     await tester.pumpAndSettle();
     expect(billing.waitCalls, 2);
+  });
+
+  testWidgets('asking too fast says to wait, not that the purchase failed',
+      (tester) async {
+    // The worst thing to say wrongly on a paywall is "that did not work" —
+    // the user tries again immediately and hits the same limit.
+    await pumpPaywall(
+      tester,
+      billing: FakeBillingRepository(rateLimited: true),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue to checkout'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Wait a moment'), findsOneWidget);
+    expect(find.text('Could not open checkout. Please try again.'),
+        findsNothing);
+    expect(opened, isEmpty);
   });
 
   testWidgets('renders in Russian', (tester) async {

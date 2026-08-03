@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:dollchecker/core/config/env.dart';
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/auth/domain/auth_failure.dart';
 
@@ -86,9 +87,11 @@ class AuthRepository {
         'delete-account',
         body: const {'confirm': true},
       );
+      if (res.status == 429) throw rateLimitedFrom(res.data);
       if (res.status != 200) throw _deleteFailure(res.status);
     } on FunctionException catch (e) {
       // Newer supabase_flutter throws instead of returning a non-2xx status.
+      if (e.status == 429) throw rateLimitedFrom(e.details);
       throw _deleteFailure(e.status);
     }
     // The user row is gone; the local session is now a token for nothing.

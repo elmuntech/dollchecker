@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dollchecker/core/config/legal_links.dart';
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/collection/domain/toy.dart';
@@ -50,10 +51,16 @@ Toy toy(String name, {String safety = 'red'}) => Toy.fromRow({
 /// Stands in for the real repository so "delete account" can be exercised
 /// without a server.
 class FakeAuthRepository implements AuthRepository {
+  FakeAuthRepository({this.rateLimited = false});
+
+  final bool rateLimited;
   bool deleted = false;
 
   @override
-  Future<void> deleteAccount() async => deleted = true;
+  Future<void> deleteAccount() async {
+    if (rateLimited) throw const RateLimitedException(60);
+    deleted = true;
+  }
 
   @override
   Future<void> signIn({required String email, required String password}) async {
@@ -336,6 +343,26 @@ void main() {
 
       expect(auth.deleted, isTrue);
       expect(find.text('Your account has been deleted.'), findsOneWidget);
+    });
+
+    testWidgets('a rate limit does not claim the deletion failed',
+        (tester) async {
+      // "Could not delete your account" is a frightening thing to say when
+      // the account is untouched and the user simply asked twice.
+      final auth = FakeAuthRepository(rateLimited: true);
+      await pumpPanel(
+        tester,
+        auth: auth,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete everything'));
+      await tester.pumpAndSettle();
+
+      expect(auth.deleted, isFalse);
+      expect(find.textContaining('Wait a moment'), findsOneWidget);
+      expect(find.textContaining('Could not delete'), findsNothing);
     });
   });
 

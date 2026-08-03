@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/scan/data/scan_repository.dart';
 import 'package:dollchecker/features/scan/presentation/result_view.dart';
 import 'package:dollchecker/features/scan/presentation/scan_controller.dart';
