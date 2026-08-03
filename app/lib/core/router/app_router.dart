@@ -8,6 +8,7 @@ import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/auth/presentation/auth_screen.dart';
 import 'package:dollchecker/features/auth/presentation/reset_password_screen.dart';
 import 'package:dollchecker/features/billing/presentation/paywall_screen.dart';
+import 'package:dollchecker/features/chat/presentation/chat_screen.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/children_screen.dart';
 import 'package:dollchecker/features/child_profile/presentation/onboarding_child_screen.dart';
@@ -118,6 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/scan/:id',
         builder: (_, state) =>
             ResultScreen(scanId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (_, state) => ChatScreen(scanId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/toy/:id',

@@ -8,6 +8,7 @@ import 'package:dollchecker/features/child_profile/presentation/child_switcher.d
 import 'package:dollchecker/features/play/data/play_repository.dart';
 import 'package:dollchecker/features/play/domain/play_idea_entry.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+import 'package:dollchecker/shared/widgets/error_retry.dart';
 
 /// Every play idea the analyzer has produced, filterable and favoritable.
 class PlayScreen extends ConsumerWidget {
@@ -57,7 +58,8 @@ class PlayScreen extends ConsumerWidget {
               onRefresh: () async => ref.invalidate(playIdeasProvider),
               child: ideas.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => _Message(text: l.analysisFailed),
+                error: (_, __) =>
+            ErrorRetry(onRetry: () => ref.invalidate(playIdeasProvider)),
                 data: (items) {
                   if (items.isEmpty) {
                     final filtered = favoritesOnly || skillFilter != null;

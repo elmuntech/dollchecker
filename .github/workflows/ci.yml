@@ -44,6 +44,46 @@ jobs:
       - name: Test
         run: flutter test
 
+  android:
+    name: Android build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      # android/ and ios/ are not committed, so the build starts from a
+      # freshly generated project — which is also what proves that
+      # tool/configure_platform.py still applies cleanly to it.
+      - name: Generate platform folders
+        run: flutter create --platforms=android --project-name dollchecker .
+
+      - name: Apply platform configuration
+        run: python3 ../tool/configure_platform.py .
+
+      # Debug rather than release: signing keys are not in CI. This still
+      # compiles every plugin's native code, which `flutter test` never does.
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dollchecker-debug-apk
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+
   functions:
     name: Edge Functions
     runs-on: ubuntu-latest
@@ -65,6 +105,7 @@ jobs:
             supabase/functions/analyze-toy/utils.ts \
             supabase/functions/analyze-toy/schema.ts \
             supabase/functions/analyze-toy/prompt.ts \
+            supabase/functions/chat-toy/utils.ts \
             supabase/functions/delete-account/utils.ts \
             supabase/functions/polar-billing/utils.ts \
             supabase/functions/polar-webhook/utils.ts \

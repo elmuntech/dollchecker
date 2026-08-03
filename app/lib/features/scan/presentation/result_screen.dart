@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:dollchecker/features/scan/presentation/result_view.dart';
 import 'package:dollchecker/features/scan/presentation/scan_controller.dart';
@@ -15,7 +16,16 @@ class ResultScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final scan = ref.watch(scanByIdProvider(scanId));
     return Scaffold(
-      appBar: AppBar(title: Text(l.appTitle)),
+      appBar: AppBar(
+        title: Text(l.appTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            tooltip: l.askAboutToy,
+            onPressed: () => context.push('/chat/$scanId'),
+          ),
+        ],
+      ),
       body: scan.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => Center(child: Text(l.analysisFailed)),

@@ -292,5 +292,17 @@
   "dailyReminderHint": "One nudge a day about today's missions",
   "reminderTime": "Reminder time",
   "reminderTitle": "Time to play",
-  "reminderBody": "Today's missions are waiting in DollChecker."
+  "reminderBody": "Today's missions are waiting in DollChecker.",
+  "couldNotLoad": "Could not load this. Check your connection.",
+  "loadMore": "Load more",
+  "askAboutToy": "Ask about this toy",
+  "chatEmpty": "Ask anything about this toy — what to try next, whether the noise is a problem, why your child ignores it.",
+  "chatHint": "Ask a question…",
+  "chatSend": "Send",
+  "chatFailed": "Could not get an answer. Please try again.",
+  "chatPremiumRequired": "Chat is part of Premium",
+  "chatStarterAge": "Is this still right for my child's age?",
+  "chatStarterBored": "My child lost interest — what now?",
+  "chatStarterSafety": "What should I watch out for?",
+  "chatStarterSkill": "How do I get more development out of it?"
 }

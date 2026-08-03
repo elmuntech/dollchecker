@@ -10,6 +10,7 @@ import 'package:dollchecker/features/child_profile/presentation/child_switcher.d
 import 'package:dollchecker/features/profile/data/profile_repository.dart';
 import 'package:dollchecker/features/scan/presentation/scan_controller.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+import 'package:dollchecker/shared/widgets/error_retry.dart';
 import 'package:dollchecker/shared/widgets/safety_badge.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -121,7 +122,10 @@ class HomeScreen extends ConsumerWidget {
                     child: Padding(
                         padding: EdgeInsets.all(24),
                         child: CircularProgressIndicator())),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, __) => ErrorRetry(
+                  compact: true,
+                  onRetry: () => ref.invalidate(historyProvider),
+                ),
                 data: (items) => items.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(24),

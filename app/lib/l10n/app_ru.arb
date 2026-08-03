@@ -271,5 +271,17 @@
   "dailyReminderHint": "Одно напоминание в день о миссиях",
   "reminderTime": "Время напоминания",
   "reminderTitle": "Пора играть",
-  "reminderBody": "Миссии на сегодня ждут в DollChecker."
+  "reminderBody": "Миссии на сегодня ждут в DollChecker.",
+  "couldNotLoad": "Не удалось загрузить. Проверьте соединение.",
+  "loadMore": "Загрузить ещё",
+  "askAboutToy": "Спросить об игрушке",
+  "chatEmpty": "Спросите любое: что попробовать дальше, опасен ли звук, почему ребёнок не играет.",
+  "chatHint": "Задайте вопрос…",
+  "chatSend": "Отправить",
+  "chatFailed": "Не удалось получить ответ. Попробуйте снова.",
+  "chatPremiumRequired": "Чат входит в Premium",
+  "chatStarterAge": "Подходит ли она по возрасту?",
+  "chatStarterBored": "Ребёнок потерял интерес — что делать?",
+  "chatStarterSafety": "На что обратить внимание?",
+  "chatStarterSkill": "Как выжать больше пользы для развития?"
 }

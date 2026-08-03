@@ -16,8 +16,8 @@ non-functional until it is done.
 |------|---------------|--------|--------|
 | Project ref + URL + anon key | `app/.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) | The whole app | ⬜ |
 | `ANTHROPIC_API_KEY` | `supabase secrets set` | Toy analysis, AI chat | ⬜ |
-| `supabase db push` for migrations `0001`–`0004` | Supabase project | Everything | ⬜ |
-| Deploy `analyze-toy`, `delete-account`, `polar-billing` | `supabase functions deploy <name>` | Scanning, account deletion, checkout | ⬜ |
+| `supabase db push` for migrations `0001`–`0005` | Supabase project | Everything | ⬜ |
+| Deploy `analyze-toy`, `chat-toy`, `delete-account`, `polar-billing` | `supabase functions deploy <name>` | Scanning, chat, account deletion, checkout | ⬜ |
 | Deploy `polar-webhook` **with `--no-verify-jwt`** | `supabase functions deploy polar-webhook --no-verify-jwt` | Tier upgrades (Polar sends no JWT; the signature check authenticates it) | ⬜ |
 | Auth → URL configuration → **Redirect URLs**: add `dollchecker://auth-callback` | Supabase dashboard | Password-reset deep link | ⬜ |
 | Auth → Email templates: confirm-signup and reset-password wording/branding | Supabase dashboard | Nice-to-have | ⬜ |
@@ -70,8 +70,12 @@ Polar docs rather than assuming.
 
 ## 4. Platform config (in the generated `android/` + `ios/` folders)
 
-These folders are not committed (`flutter create` regenerates them), so each
-item has to be applied once when the release project is set up.
+These folders are not committed (`flutter create` regenerates them). Everything
+in the table below is applied for you by **`python3 tool/configure_platform.py app`**
+— run it after `flutter create`, and re-run it freely, it is idempotent. CI runs
+it on every pull request, so it cannot drift from what the app needs.
+
+The two rows it cannot do for you — icons and signing — are marked.
 
 | Item | Where | Blocks |
 |------|-------|--------|
@@ -81,7 +85,8 @@ item has to be applied once when the release project is set up.
 | `POST_NOTIFICATIONS` permission + `SCHEDULE_EXACT_ALARM` not needed (inexact scheduling is used deliberately) | `AndroidManifest.xml` | Daily reminders on Android 13+ |
 | Notification icon `@mipmap/ic_launcher` present (default from `flutter create`) | `android/app/src/main/res` | Android reminder rendering |
 | Notification capability + `UNUserNotificationCenter` delegate (added by the plugin) | Xcode | iOS reminders |
-| Release signing (keystore, provisioning profiles) | `android/key.properties`, Xcode | Any release build |
+| Release signing (keystore, provisioning profiles) — **manual** | `android/key.properties`, Xcode | Any release build |
+| App icon / splash from the source assets — **manual** | `flutter_launcher_icons` or by hand | Store submission |
 
 ## 5. Optional / later
 

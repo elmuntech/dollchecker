@@ -5,6 +5,7 @@ import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/child_form_sheet.dart';
 import 'package:dollchecker/features/child_profile/presentation/child_switcher.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+import 'package:dollchecker/shared/widgets/error_retry.dart';
 
 /// Manage every child profile: add, edit, delete, and pick the active one.
 class ChildrenScreen extends ConsumerWidget {
@@ -65,7 +66,8 @@ class ChildrenScreen extends ConsumerWidget {
       ),
       body: children.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => Center(child: Text(l.analysisFailed)),
+        error: (_, __) =>
+            ErrorRetry(onRetry: () => ref.invalidate(childrenProvider)),
         data: (items) => ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [

@@ -6,6 +6,7 @@ import 'package:dollchecker/features/collection/data/toy_repository.dart';
 import 'package:dollchecker/features/collection/domain/toy.dart';
 import 'package:dollchecker/features/scan/presentation/scan_controller.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+import 'package:dollchecker/shared/widgets/error_retry.dart';
 import 'package:dollchecker/shared/widgets/safety_badge.dart';
 
 /// Every toy the user has scanned, deduplicated into one entry per toy.
@@ -91,7 +92,8 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
               onRefresh: () async => ref.invalidate(collectionProvider),
               child: toys.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => _CenteredMessage(text: l.analysisFailed),
+                error: (_, __) =>
+              ErrorRetry(onRetry: () => ref.invalidate(collectionProvider)),
                 data: (items) {
                   if (items.isEmpty) {
                     final noFilters = filter == CollectionFilter.all &&

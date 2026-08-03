@@ -17,6 +17,7 @@ import 'package:dollchecker/features/parents/domain/household_report.dart';
 import 'package:dollchecker/features/parents/domain/safety_watch.dart';
 import 'package:dollchecker/features/profile/data/profile_repository.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+import 'package:dollchecker/shared/widgets/error_retry.dart';
 import 'package:dollchecker/shared/widgets/safety_badge.dart';
 
 /// The grown-ups' view of the app.
@@ -30,7 +31,8 @@ class ParentsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final report = ref.watch(householdReportProvider).valueOrNull;
+    final reportAsync = ref.watch(householdReportProvider);
+    final report = reportAsync.valueOrNull;
     final watch = ref.watch(safetyWatchProvider).valueOrNull;
     final today = ref.watch(todayProvider);
 
@@ -45,7 +47,12 @@ class ParentsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            if (report == null)
+            if (reportAsync.hasError)
+              ErrorRetry(onRetry: () {
+                ref.invalidate(householdReportProvider);
+                ref.invalidate(safetyWatchProvider);
+              })
+            else if (report == null)
               const Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(child: CircularProgressIndicator()),

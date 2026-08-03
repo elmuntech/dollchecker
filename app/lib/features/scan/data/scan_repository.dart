@@ -7,6 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/scan/domain/toy_analysis.dart';
 
+/// How many scans one page of history holds.
+const kHistoryPageSize = 30;
+
 class QuotaExceededException implements Exception {}
 
 class AnalysisException implements Exception {
@@ -61,13 +64,19 @@ class ScanRepository {
     );
   }
 
-  /// History list for the current user (newest first).
-  Future<List<ScanSummary>> history({int limit = 50}) async {
+  /// One page of history for the current user, newest first.
+  ///
+  /// Paged rather than capped: the old fixed limit meant a family past it
+  /// simply stopped seeing their older scans, with nothing to say so.
+  Future<List<ScanSummary>> history({
+    int limit = kHistoryPageSize,
+    int offset = 0,
+  }) async {
     final rows = await _client
         .from('scans')
         .select('id, identification, safety_overall, educational_score, created_at')
         .order('created_at', ascending: false)
-        .limit(limit);
+        .range(offset, offset + limit - 1);
     return (rows as List)
         .map((r) => ScanSummary.fromRow(Map<String, dynamic>.from(r as Map)))
         .toList();
