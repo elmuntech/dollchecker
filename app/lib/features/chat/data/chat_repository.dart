@@ -11,6 +11,10 @@ class ChatPremiumRequiredException implements Exception {}
 
 class ChatFailedException implements Exception {}
 
+/// Asked too fast. Premium is unlimited in the sense that matters, but not
+/// literally — a subscription costs a fixed amount and a conversation does not.
+class ChatRateLimitedException implements Exception {}
+
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return ChatRepository(ref.watch(supabaseProvider), ref);
 });
@@ -46,11 +50,13 @@ class ChatRepository {
         'locale': _ref.read(localeProvider).languageCode,
       });
       if (res.status == 402) throw ChatPremiumRequiredException();
+      if (res.status == 429) throw ChatRateLimitedException();
       if (res.status != 200 || res.data == null) throw ChatFailedException();
       payload = res.data;
     } on FunctionException catch (e) {
       // Newer supabase_flutter throws instead of returning a non-2xx status.
       if (e.status == 402) throw ChatPremiumRequiredException();
+      if (e.status == 429) throw ChatRateLimitedException();
       throw ChatFailedException();
     }
 

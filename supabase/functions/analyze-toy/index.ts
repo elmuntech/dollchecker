@@ -1,8 +1,8 @@
 // analyze-toy — Claude Vision proxy.
 //
 // Responsibilities (all server-side, so the Anthropic key never ships in the app):
-//   1. Verify the caller's Supabase JWT.
-//   2. Enforce a per-user monthly scan quota (free tier).
+//   1. Verify the caller's Supabase JWT, then rate limit it.
+//   2. Take one scan from the monthly quota — before the model call, atomically.
 //   3. Store the toy image in the private `toy-images` bucket.
 //   4. Call Claude Vision with a forced JSON schema (guaranteed valid output).
 //   5. Persist scan + development_scores + play_ideas.
@@ -14,16 +14,21 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  clientIp,
+  enforceRateLimits,
+  rateLimitedResponse,
+  usageFromCompletion,
+} from "../_shared/rate_limit.ts";
 import { ANALYSIS_SCHEMA } from "./schema.ts";
 import { buildUserText, SYSTEM_PROMPT } from "./prompt.ts";
 import {
   base64ByteLength,
   base64ToBytes,
-  evaluateQuota,
+  FREE_MONTHLY_SCANS,
   isAllowedMedia,
   MAX_IMAGE_BYTES,
   monthsSince,
-  nextMonthStart,
   normalizeLocale,
   toyIdentity,
   toyImagePath,
@@ -36,6 +41,10 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const MODEL = "claude-sonnet-5";
 
+// A scan is a slow, expensive call, so the per-minute allowance is small: this
+// is about stopping a burst, not about pacing a person taking photos.
+const RATE_LIMITS = { perMinute: 6, perHour: 40, perIpMinute: 20 };
+
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
@@ -47,6 +56,11 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
+
+  // Set once the quota has been taken, so an unexpected failure below can give
+  // it back — a crash must not cost the user a scan they never received.
+  let reserved = false;
+  let reservedFor: string | null = null;
 
   try {
     // --- 1. Auth ----------------------------------------------------------
@@ -83,21 +97,67 @@ Deno.serve(async (req) => {
     const locale = normalizeLocale(body.locale);
     const childProfileId: string | null = body.child_profile_id ?? null;
 
-    // --- 3. Quota ---------------------------------------------------------
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("tier, scan_quota_used, quota_reset_at")
-      .eq("id", user.id)
-      .single();
-
-    const quota = evaluateQuota({
-      tier: profile?.tier,
-      scanQuotaUsed: profile?.scan_quota_used,
-      quotaResetAt: profile?.quota_reset_at,
-    });
-    if (quota.exceeded) {
-      return json(429, { error: "quota_exceeded", limit: quota.limit });
+    // --- 3. Rate limit ----------------------------------------------------
+    const limits = await enforceRateLimits(admin, [
+      {
+        action: "analyze",
+        kind: "user",
+        subject: user.id,
+        limit: RATE_LIMITS.perMinute,
+        windowSeconds: 60,
+      },
+      {
+        action: "analyze",
+        kind: "user",
+        subject: user.id,
+        limit: RATE_LIMITS.perHour,
+        windowSeconds: 3600,
+      },
+      {
+        action: "analyze",
+        kind: "ip",
+        subject: clientIp(req.headers),
+        limit: RATE_LIMITS.perIpMinute,
+        windowSeconds: 60,
+      },
+    ]);
+    if (!limits.allowed) {
+      return rateLimitedResponse(limits.retryAfter, corsHeaders);
     }
+
+    // --- 4. Quota, taken up front ------------------------------------------
+    // Reserved before the model call rather than counted after it. The old
+    // order read the count at the start and wrote it at the end, so a burst of
+    // concurrent requests all saw the same number and all passed a cap none of
+    // them respected.
+    const { data: quotaRows, error: quotaErr } = await admin.rpc(
+      "consume_scan_quota",
+      { p_user_id: user.id, p_limit: FREE_MONTHLY_SCANS },
+    );
+    if (quotaErr) {
+      console.error("quota check failed", quotaErr.message);
+      return json(500, { error: "quota_unavailable" });
+    }
+    const quota = Array.isArray(quotaRows) ? quotaRows[0] : quotaRows;
+    if (!quota?.allowed) {
+      // 402, not 429: this is "upgrade to continue", not "slow down". The two
+      // need different words in the app, so they get different statuses.
+      return json(402, {
+        error: "quota_exceeded",
+        limit: FREE_MONTHLY_SCANS,
+      });
+    }
+
+    reserved = true;
+    reservedFor = user.id;
+
+    /** Hands the allowance back when the work it paid for did not happen. */
+    const refund = async () => {
+      const { error } = await admin.rpc("refund_scan_quota", {
+        p_user_id: user.id,
+      });
+      if (error) console.error("quota refund failed", error.message);
+    };
 
     // --- 4. Child age context --------------------------------------------
     let childAgeMonths: number | null = null;
@@ -165,6 +225,7 @@ Deno.serve(async (req) => {
     if (!anthropicRes.ok) {
       const detail = await anthropicRes.text();
       console.error("anthropic error", anthropicRes.status, detail);
+      await refund();
       return json(502, {
         error: "analysis_failed",
         status: anthropicRes.status,
@@ -172,6 +233,18 @@ Deno.serve(async (req) => {
     }
 
     const completion = await anthropicRes.json();
+
+    // Logged before anything else can fail: the tokens were spent whatever
+    // happens to the response from here on.
+    const usage = usageFromCompletion(completion);
+    await admin.from("ai_usage").insert({
+      user_id: user.id,
+      function_name: "analyze-toy",
+      model: MODEL,
+      input_tokens: usage.input,
+      output_tokens: usage.output,
+    });
+
     if (completion.stop_reason === "refusal") {
       return json(422, { error: "analysis_refused" });
     }
@@ -185,6 +258,8 @@ Deno.serve(async (req) => {
       console.error("json parse failed", textBlock?.text);
       return json(502, { error: "invalid_analysis_json" });
     }
+    // A refusal or unparseable answer still cost a model call, so the quota is
+    // not refunded past this point — only a failure to reach the model is.
 
     // --- 7. Persist -------------------------------------------------------
     const { data: scan, error: scanErr } = await admin
@@ -270,33 +345,27 @@ Deno.serve(async (req) => {
       else toyId = (upsertedToyId as string | null) ?? null;
     }
 
-    // --- 9. Bump quota ----------------------------------------------------
-    const usedAfter = quota.used + 1;
-    await admin
-      .from("profiles")
-      .update({
-        scan_quota_used: usedAfter,
-        quota_reset_at: quota.rolledOver
-          ? nextMonthStart()
-          : profile?.quota_reset_at,
-      })
-      .eq("id", user.id);
-
+    // The quota was already taken in step 4; there is nothing to bump here.
     return json(200, {
       scan_id: scan.id,
       toy_id: toyId,
       image_path: imageUrl,
       analysis,
       quota: {
-        limit: quota.limit,
-        used: usedAfter,
-        remaining: quota.remaining === null
-          ? null
-          : Math.max(0, quota.remaining - 1),
+        limit: quota.tier === "free" ? FREE_MONTHLY_SCANS : null,
+        used: quota.used,
+        remaining: quota.remaining,
       },
     });
   } catch (e) {
     console.error("unhandled", e);
+    if (reserved && reservedFor !== null) {
+      const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+      const { error } = await admin.rpc("refund_scan_quota", {
+        p_user_id: reservedFor,
+      });
+      if (error) console.error("quota refund failed", error.message);
+    }
     return json(500, { error: "internal_error" });
   }
 });

@@ -10,7 +10,17 @@ import 'package:dollchecker/features/scan/domain/toy_analysis.dart';
 /// How many scans one page of history holds.
 const kHistoryPageSize = 30;
 
+/// The free monthly allowance is spent. The answer is the paywall, not a retry,
+/// which is why the server says 402 rather than 429.
 class QuotaExceededException implements Exception {}
+
+/// Too many requests in too short a time. Unlike a spent quota this resolves by
+/// itself, so the message says when to try again rather than offering to sell
+/// something.
+class RateLimitedException implements Exception {
+  const RateLimitedException([this.retryAfterSeconds]);
+  final int? retryAfterSeconds;
+}
 
 class AnalysisException implements Exception {
   final String message;
@@ -20,6 +30,20 @@ class AnalysisException implements Exception {
 final scanRepositoryProvider = Provider<ScanRepository>((ref) {
   return ScanRepository(ref.watch(supabaseProvider));
 });
+
+/// Reads `retry_after` out of whatever shape the error arrived in.
+///
+/// The body is a decoded map on one path and an opaque `details` object on the
+/// other, and either may be missing the field entirely — a limit with no stated
+/// wait is still a limit, so the exception is thrown regardless.
+RateLimitedException rateLimitedFrom(Object? payload) {
+  if (payload is Map) {
+    final seconds = payload['retry_after'];
+    if (seconds is int) return RateLimitedException(seconds);
+    if (seconds is String) return RateLimitedException(int.tryParse(seconds));
+  }
+  return const RateLimitedException();
+}
 
 class ScanRepository {
   ScanRepository(this._client);
@@ -44,14 +68,16 @@ class ScanRepository {
           'locale': locale,
         },
       );
-      if (res.status == 429) throw QuotaExceededException();
+      if (res.status == 402) throw QuotaExceededException();
+      if (res.status == 429) throw rateLimitedFrom(res.data);
       if (res.status != 200 || res.data == null) {
         throw AnalysisException('status ${res.status}');
       }
       payload = res.data;
     } on FunctionException catch (e) {
       // Newer supabase_flutter throws instead of returning a non-2xx status.
-      if (e.status == 429) throw QuotaExceededException();
+      if (e.status == 402) throw QuotaExceededException();
+      if (e.status == 429) throw rateLimitedFrom(e.details);
       throw AnalysisException('status ${e.status}');
     }
 

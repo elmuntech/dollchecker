@@ -67,6 +67,8 @@ All tables are per-user and protected by RLS keyed on `auth.uid()`.
 | `daily_missions` | Three missions per child per day, with status. Streaks are derived, never stored. |
 | `billing_events` | Polar webhook log; the primary key makes a retried delivery a no-op. |
 | `chat_messages` | The follow-up conversation, one thread per scan. |
+| `rate_limits` | Fixed-window counters, per user and per IP. Service-role only. |
+| `ai_usage` | Token counts per model call — what makes abuse visible before the invoice. |
 
 Three pieces of logic live in SQL because they must not drift:
 
@@ -78,6 +80,11 @@ Three pieces of logic live in SQL because they must not drift:
   `auth.uid()` filter.
 - `apply_subscription_state` — the only writer of the tier. Ignores an event
   older than the one already recorded, because Polar guarantees no ordering.
+- `consume_scan_quota` — takes one scan from the allowance under a row lock,
+  before the model call. The previous read-at-start/write-at-end arrangement let
+  a burst of concurrent requests walk through the cap entirely.
+- `hit_rate_limit` — a fixed-window counter every function calls per user and
+  per IP.
 
 ---
 
@@ -160,7 +167,10 @@ challenged.
    (permissions, deep link, desugaring, iOS usage strings) is applied by
    `tool/configure_platform.py`, which CI runs before building — so the
    configuration cannot rot into an unread checklist.
-9. **Safety framing is deliberately hedged.** The model is instructed never to
+9. **The limiter fails open.** If the rate-limit table is unreachable, requests
+   are allowed. An outage in the limiter taking the product down is a worse
+   failure than a window of unlimited requests, and the quota still bounds cost.
+10. **Safety framing is deliberately hedged.** The model is instructed never to
    claim a toy is "certified safe", and every response carries a disclaimer that
    this is AI guidance, not a substitute for certifications, packaging warnings
    or recall data.

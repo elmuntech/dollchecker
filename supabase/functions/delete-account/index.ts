@@ -12,6 +12,11 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  clientIp,
+  enforceRateLimits,
+  rateLimitedResponse,
+} from "../_shared/rate_limit.ts";
 import { chunk, isConfirmed, STORAGE_BATCH, storagePaths } from "./utils.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -55,6 +60,26 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    const limits = await enforceRateLimits(admin, [
+      {
+        action: "delete-account",
+        kind: "user",
+        subject: user.id,
+        limit: 5,
+        windowSeconds: 60,
+      },
+      {
+        action: "delete-account",
+        kind: "ip",
+        subject: clientIp(req.headers),
+        limit: 15,
+        windowSeconds: 60,
+      },
+    ]);
+    if (!limits.allowed) {
+      return rateLimitedResponse(limits.retryAfter, corsHeaders);
+    }
 
     // --- 1. Storage ------------------------------------------------------
     // Images live under `{user_id}/…`; page through the prefix and delete in
