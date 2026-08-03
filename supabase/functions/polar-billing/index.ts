@@ -13,6 +13,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import {
+  clientIp,
+  enforceRateLimits,
+  rateLimitedResponse,
+} from "../_shared/rate_limit.ts";
+import {
   apiBase,
   checkoutBody,
   customerSessionBody,
@@ -108,6 +113,26 @@ Deno.serve(async (req) => {
     // Portal: reuse the stored customer id when the webhook has already seen
     // this account, otherwise let Polar resolve it by external id.
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    const limits = await enforceRateLimits(admin, [
+      {
+        action: "polar-billing",
+        kind: "user",
+        subject: user.id,
+        limit: 10,
+        windowSeconds: 60,
+      },
+      {
+        action: "polar-billing",
+        kind: "ip",
+        subject: clientIp(req.headers),
+        limit: 30,
+        windowSeconds: 60,
+      },
+    ]);
+    if (!limits.allowed) {
+      return rateLimitedResponse(limits.retryAfter, corsHeaders);
+    }
     const { data: profile } = await admin
       .from("profiles")
       .select("polar_customer_id")

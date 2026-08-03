@@ -12,6 +12,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  clientIp,
+  enforceRateLimits,
+  rateLimitedResponse,
+  usageFromCompletion,
+} from "../_shared/rate_limit.ts";
 import { monthsSince, normalizeLocale } from "../analyze-toy/utils.ts";
 import {
   buildUserText,
@@ -28,6 +34,12 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const MODEL = "claude-sonnet-5";
+
+// Premium is unlimited in the sense that matters — nobody hits these in normal
+// use — but not literally unlimited: a subscription costs a fixed amount and a
+// conversation does not, so one paid account should not be able to outspend
+// every other one combined.
+const RATE_LIMITS = { perMinute: 10, perDay: 100, perIpMinute: 30 };
 
 const SYSTEM_PROMPT =
   `You are DollChecker's play coach: a warm, concrete assistant helping a parent get the most out of a toy they own.
@@ -75,6 +87,33 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if ((profile?.tier ?? "free") === "free") {
       return json(402, { error: "premium_required" });
+    }
+
+    const limits = await enforceRateLimits(admin, [
+      {
+        action: "chat",
+        kind: "user",
+        subject: user.id,
+        limit: RATE_LIMITS.perMinute,
+        windowSeconds: 60,
+      },
+      {
+        action: "chat",
+        kind: "user",
+        subject: user.id,
+        limit: RATE_LIMITS.perDay,
+        windowSeconds: 86400,
+      },
+      {
+        action: "chat",
+        kind: "ip",
+        subject: clientIp(req.headers),
+        limit: RATE_LIMITS.perIpMinute,
+        windowSeconds: 60,
+      },
+    ]);
+    if (!limits.allowed) {
+      return rateLimitedResponse(limits.retryAfter, corsHeaders);
     }
 
     const body = await req.json().catch(() => null);
@@ -152,6 +191,16 @@ Deno.serve(async (req) => {
     }
 
     const completion = await anthropicRes.json();
+
+    const usage = usageFromCompletion(completion);
+    await admin.from("ai_usage").insert({
+      user_id: user.id,
+      function_name: "chat-toy",
+      model: MODEL,
+      input_tokens: usage.input,
+      output_tokens: usage.output,
+    });
+
     const reply = (completion.content ?? [])
       .filter((block: { type?: string }) => block.type === "text")
       .map((block: { text?: string }) => block.text ?? "")

@@ -4,11 +4,9 @@ import { deepStrictEqual, notDeepStrictEqual } from "node:assert/strict";
 import {
   base64ByteLength,
   base64ToBytes,
-  evaluateQuota,
   FREE_MONTHLY_SCANS,
   isAllowedMedia,
   monthsSince,
-  nextMonthStart,
   normalizeLocale,
   toyIdentity,
   toyImagePath,
@@ -57,70 +55,11 @@ Deno.test("monthsSince counts whole months only", () => {
   deepStrictEqual(monthsSince("not-a-date", now), 0);
 });
 
-Deno.test("nextMonthStart rolls the year over in December", () => {
-  deepStrictEqual(
-    nextMonthStart(new Date("2026-12-15T00:00:00Z")),
-    "2027-01-01T00:00:00.000Z",
-  );
-  deepStrictEqual(
-    nextMonthStart(new Date("2026-07-01T00:00:00Z")),
-    "2026-08-01T00:00:00.000Z",
-  );
-});
 
-Deno.test("evaluateQuota blocks a free account at the limit", () => {
-  const now = new Date("2026-07-26T00:00:00Z");
-  const q = evaluateQuota({
-    tier: "free",
-    scanQuotaUsed: FREE_MONTHLY_SCANS,
-    quotaResetAt: "2026-08-01T00:00:00Z",
-  }, now);
-  deepStrictEqual(q.exceeded, true);
-  deepStrictEqual(q.remaining, 0);
-  deepStrictEqual(q.limit, FREE_MONTHLY_SCANS);
-});
 
-Deno.test("evaluateQuota leaves headroom below the limit", () => {
-  const now = new Date("2026-07-26T00:00:00Z");
-  const q = evaluateQuota({
-    tier: "free",
-    scanQuotaUsed: 3,
-    quotaResetAt: "2026-08-01T00:00:00Z",
-  }, now);
-  deepStrictEqual(q.exceeded, false);
-  deepStrictEqual(q.used, 3);
-  deepStrictEqual(q.remaining, FREE_MONTHLY_SCANS - 3);
-});
 
-Deno.test("evaluateQuota resets usage once the window has elapsed", () => {
-  const now = new Date("2026-08-02T00:00:00Z");
-  const q = evaluateQuota({
-    tier: "free",
-    scanQuotaUsed: 99,
-    quotaResetAt: "2026-08-01T00:00:00Z",
-  }, now);
-  deepStrictEqual(q.rolledOver, true);
-  deepStrictEqual(q.used, 0);
-  deepStrictEqual(q.exceeded, false);
-});
 
-Deno.test("evaluateQuota treats premium as unlimited", () => {
-  const q = evaluateQuota({
-    tier: "premium",
-    scanQuotaUsed: 5_000,
-    quotaResetAt: "2099-01-01T00:00:00Z",
-  }, new Date("2026-07-26T00:00:00Z"));
-  deepStrictEqual(q.exceeded, false);
-  deepStrictEqual(q.limit, null);
-  deepStrictEqual(q.remaining, null);
-});
 
-Deno.test("evaluateQuota handles a missing profile row", () => {
-  const q = evaluateQuota({}, new Date("2026-07-26T00:00:00Z"));
-  deepStrictEqual(q.used, 0);
-  deepStrictEqual(q.exceeded, false);
-  deepStrictEqual(q.limit, FREE_MONTHLY_SCANS);
-});
 
 Deno.test("toyImagePath is namespaced by user id, matching storage RLS", () => {
   const path = toyImagePath("user-1", "image/png", "abc");

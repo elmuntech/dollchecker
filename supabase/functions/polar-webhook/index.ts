@@ -54,6 +54,11 @@ Deno.serve(async (req) => {
     return json(503, { error: "not_configured" });
   }
 
+  // Deliberately not rate limited. The signature check below is pure CPU and
+  // touches nothing; a database round-trip per request would make a flood of
+  // invalid deliveries *more* expensive for us, not less. Valid deliveries are
+  // bounded by Polar, and a dropped one is retried.
+  //
   // The signature covers the exact bytes that arrived, so the body must be read
   // as text and parsed only after it has been verified.
   const body = await req.text();

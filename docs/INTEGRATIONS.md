@@ -16,7 +16,7 @@ non-functional until it is done.
 |------|---------------|--------|--------|
 | Project ref + URL + anon key | `app/.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) | The whole app | ⬜ |
 | `ANTHROPIC_API_KEY` | `supabase secrets set` | Toy analysis, AI chat | ⬜ |
-| `supabase db push` for migrations `0001`–`0005` | Supabase project | Everything | ⬜ |
+| `supabase db push` for migrations `0001`–`0006` | Supabase project | Everything | ⬜ |
 | Deploy `analyze-toy`, `chat-toy`, `delete-account`, `polar-billing` | `supabase functions deploy <name>` | Scanning, chat, account deletion, checkout | ⬜ |
 | Deploy `polar-webhook` **with `--no-verify-jwt`** | `supabase functions deploy polar-webhook --no-verify-jwt` | Tier upgrades (Polar sends no JWT; the signature check authenticates it) | ⬜ |
 | Auth → URL configuration → **Redirect URLs**: add `dollchecker://auth-callback` | Supabase dashboard | Password-reset deep link | ⬜ |
@@ -108,6 +108,7 @@ Set under Settings → Secrets and variables → Actions. Full instructions in
 | Item | Purpose | Status |
 |------|---------|--------|
 | Sentry DSN | Crash reporting | ⬜ |
+| An alert on `ai_usage_last_day` (a scheduled query, or Supabase log drain) | Noticing model abuse before the invoice does | ⬜ |
 | Analytics key (PostHog / Firebase) | Funnel + retention | ⬜ |
 | FCM / APNs keys | Remote push only — the shipped daily reminder is local and needs no keys | ⬜ |
 | Toy recall data source | Real recall checks instead of AI-only guidance | ⬜ |

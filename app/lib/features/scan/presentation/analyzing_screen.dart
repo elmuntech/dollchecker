@@ -50,8 +50,10 @@ class AnalyzingScreen extends ConsumerWidget {
                 const Text('😕', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 12),
                 Text(
-                  e is QuotaExceededException
-                      ? l.quotaExceeded
+                  e is RateLimitedException
+                      ? l.rateLimited
+                      : e is QuotaExceededException
+                          ? l.quotaExceeded
                       : l.analysisFailed,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium,

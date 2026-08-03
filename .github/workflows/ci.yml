@@ -121,7 +121,8 @@ jobs:
             supabase/functions/delete-account/utils.ts \
             supabase/functions/polar-billing/utils.ts \
             supabase/functions/polar-webhook/utils.ts \
-            supabase/functions/_shared/cors.ts
+            supabase/functions/_shared/cors.ts \
+            supabase/functions/_shared/rate_limit.ts
 
       - name: Test
         run: deno test supabase/functions/

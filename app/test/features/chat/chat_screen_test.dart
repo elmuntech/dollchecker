@@ -20,12 +20,14 @@ class FakeChatRepository implements ChatRepository {
   FakeChatRepository({
     this.reply = 'Try stacking them by colour.',
     this.premiumRequired = false,
+    this.rateLimited = false,
     this.fails = false,
     this.stored = const [],
   });
 
   final String reply;
   final bool premiumRequired;
+  final bool rateLimited;
   final bool fails;
   final List<ChatMessage> stored;
 
@@ -41,6 +43,7 @@ class FakeChatRepository implements ChatRepository {
   }) async {
     asked.add(question);
     if (premiumRequired) throw ChatPremiumRequiredException();
+    if (rateLimited) throw ChatRateLimitedException();
     if (fails) throw ChatFailedException();
     return reply;
   }
@@ -134,6 +137,17 @@ void main() {
     expect(find.text('Could not get an answer. Please try again.'),
         findsOneWidget);
     expect(find.text('Is it loud?'), findsOneWidget);
+  });
+
+  testWidgets('asking too fast says to wait, not that it broke',
+      (tester) async {
+    await pumpChat(tester, FakeChatRepository(rateLimited: true));
+    await tester.enterText(find.byType(TextField), 'Is it loud?');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Wait a moment'), findsOneWidget);
+    expect(find.textContaining('Could not get an answer'), findsNothing);
   });
 
   testWidgets('renders in Russian', (tester) async {

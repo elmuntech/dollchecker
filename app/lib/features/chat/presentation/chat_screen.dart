@@ -29,6 +29,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _sending = false;
   bool _premiumRequired = false;
   bool _failed = false;
+  bool _rateLimited = false;
 
   @override
   void dispose() {
@@ -46,6 +47,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _pending.add(ChatMessage.pending(question));
       _sending = true;
       _failed = false;
+      _rateLimited = false;
       _premiumRequired = false;
     });
     _scrollToEnd();
@@ -66,6 +68,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
     } on ChatPremiumRequiredException {
       if (mounted) setState(() => _premiumRequired = true);
+    } on ChatRateLimitedException {
+      if (mounted) setState(() => _rateLimited = true);
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     } finally {
@@ -116,11 +120,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             if (_premiumRequired)
               _PremiumBanner(onUpgrade: () => context.push('/paywall'))
-            else if (_failed)
+            else if (_failed || _rateLimited)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  l.chatFailed,
+                  _rateLimited ? l.rateLimited : l.chatFailed,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),

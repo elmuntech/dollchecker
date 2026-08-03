@@ -4,6 +4,10 @@
 // `deno test` without any network or environment setup.
 
 export const ALLOWED_MEDIA = ["image/jpeg", "image/png", "image/webp"] as const;
+
+/** Free-tier monthly allowance. Enforced by `consume_scan_quota` (migration
+ *  0006), which is the only implementation — this constant just tells it the
+ *  limit, and matches `kFreeMonthlyScans` in the Flutter app. */
 export const FREE_MONTHLY_SCANS = 10;
 
 /** Max decoded image size we accept (bytes). Larger payloads are rejected
@@ -44,55 +48,6 @@ export function monthsSince(dateStr: string, now: Date = new Date()): number {
   // Not a full month yet if the day-of-month hasn't come around.
   if (now.getDate() < d.getDate()) months -= 1;
   return Math.max(0, months);
-}
-
-/** Start of next month, UTC — the next quota reset boundary. */
-export function nextMonthStart(now: Date = new Date()): string {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
-    .toISOString();
-}
-
-export interface QuotaInput {
-  tier?: string | null;
-  scanQuotaUsed?: number | null;
-  quotaResetAt?: string | null;
-}
-
-export interface QuotaState {
-  /** Usage after applying a pending monthly rollover. */
-  used: number;
-  /** True when the stored window had already elapsed. */
-  rolledOver: boolean;
-  exceeded: boolean;
-  limit: number | null;
-  remaining: number | null;
-}
-
-/**
- * Resolves the caller's quota position. Premium accounts are unlimited
- * (`limit`/`remaining` are null); free accounts get FREE_MONTHLY_SCANS per
- * calendar month, and a stale window resets usage to zero.
- */
-export function evaluateQuota(
-  input: QuotaInput,
-  now: Date = new Date(),
-): QuotaState {
-  const resetAt = input.quotaResetAt ? new Date(input.quotaResetAt) : null;
-  const rolledOver = resetAt !== null &&
-    !Number.isNaN(resetAt.getTime()) &&
-    now.getTime() >= resetAt.getTime();
-  const used = rolledOver ? 0 : Math.max(0, input.scanQuotaUsed ?? 0);
-
-  if ((input.tier ?? "free") !== "free") {
-    return { used, rolledOver, exceeded: false, limit: null, remaining: null };
-  }
-  return {
-    used,
-    rolledOver,
-    exceeded: used >= FREE_MONTHLY_SCANS,
-    limit: FREE_MONTHLY_SCANS,
-    remaining: Math.max(0, FREE_MONTHLY_SCANS - used),
-  };
 }
 
 /** Storage object path for a toy image: `{user_id}/{uuid}.{ext}`, matching the

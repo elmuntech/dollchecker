@@ -304,5 +304,6 @@
   "chatStarterAge": "Is this still right for my child's age?",
   "chatStarterBored": "My child lost interest — what now?",
   "chatStarterSafety": "What should I watch out for?",
-  "chatStarterSkill": "How do I get more development out of it?"
+  "chatStarterSkill": "How do I get more development out of it?",
+  "rateLimited": "Too many requests just now. Wait a moment and try again."
 }

@@ -50,6 +50,8 @@ supabase/
   migrations/0003_daily_missions.sql          daily missions + toy rotation
   migrations/0004_billing.sql                 subscription state, locked-down profile columns
   migrations/0005_toy_chat.sql                chat threads, one per scan
+  migrations/0006_abuse_controls.sql          atomic quota, rate limits, model-usage log
+  functions/_shared/rate_limit.ts             fixed-window limiter used by every function
   functions/analyze-toy/index.ts              Claude vision proxy
   functions/analyze-toy/utils.ts              pure helpers (quota, toy identity)
   functions/delete-account/index.ts           account + storage deletion (store requirement)
@@ -207,6 +209,29 @@ no card data anywhere near the app.
   replayed delivery a no-op.
 - Until the Polar keys exist, `polar-billing` answers `503` and the paywall says premium
   is not open yet. Everything else in the app keeps working.
+
+### Abuse and cost control
+
+The threat this project faces is not a flood — the platform absorbs that — but
+somebody spending the model budget.
+
+- **The quota is taken before the model call, atomically.** It used to be read
+  at the start of a request and written at the end, so fifty concurrent requests
+  all saw `used = 0`, all passed, and all wrote `1`: a ten-scan cap a burst
+  walked straight through. `consume_scan_quota` (migration 0006) takes it under
+  a row lock and hands it back if the call never happened.
+- **Every function is rate limited**, per user and per IP, by a fixed-window
+  counter in Postgres — an in-memory one would reset with each isolate and limit
+  nothing. `polar-webhook` deliberately is not: its signature check is pure CPU,
+  so adding a database round-trip per invalid delivery would make a flood more
+  expensive for us, not less.
+- **A spent quota is `402`, a rate limit is `429`.** One means "upgrade", the
+  other means "wait" — different words in the app, so different statuses.
+- **Every model call is logged to `ai_usage`** with its token counts, and
+  `ai_usage_last_day` answers "who is burning the budget" in one select. Without
+  it the first sign of abuse is the invoice.
+- If the limiter itself fails, requests are **allowed**: an outage in it must
+  not take the product down, and the quota still bounds the spend.
 
 ### Account lifecycle
 
