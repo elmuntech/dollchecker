@@ -14,7 +14,7 @@ export const TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
  * distributed base64-encoded behind a `whsec_` prefix. A secret that is neither
  * is used as raw bytes, which is what a hand-set test secret looks like.
  */
-export function decodeWebhookSecret(secret: string): Uint8Array {
+export function decodeWebhookSecret(secret: string): Uint8Array<ArrayBuffer> {
   const raw = secret.startsWith("whsec_") ? secret.slice(6) : secret;
   try {
     const bin = atob(raw);
@@ -22,7 +22,11 @@ export function decodeWebhookSecret(secret: string): Uint8Array {
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   } catch {
-    return new TextEncoder().encode(raw);
+    // Copied rather than returned directly: Web Crypto will not import a key
+    // backed by a SharedArrayBuffer, and the plain `Uint8Array` this used to
+    // be annotated as allows one. `Uint8Array.from` pins the buffer type no
+    // matter what `TextEncoder.encode` is declared to return.
+    return Uint8Array.from(new TextEncoder().encode(raw));
   }
 }
 
@@ -37,7 +41,7 @@ export function signedPayload(
 
 /** HMAC-SHA256 of `payload` under `key`, base64 — the Standard Webhooks MAC. */
 export async function hmacSha256Base64(
-  key: Uint8Array,
+  key: Uint8Array<ArrayBuffer>,
   payload: string,
 ): Promise<string> {
   const imported = await crypto.subtle.importKey(
