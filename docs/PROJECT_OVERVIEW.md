@@ -212,7 +212,8 @@ helpers). Nothing has yet run against a live Supabase project.
 | Subscriptions: checkout, customer portal, webhook, paywall | ✅ |
 | Daily reminder with permission handling | ✅ |
 | Per-scan AI chat | ✅ |
-| History paging, visible errors with retry, signed-URL expiry | ✅ |
+| History, collection and play paged — no list stops at a hidden cap | ✅ |
+| Visible errors with retry, signed-URL expiry | ✅ |
 | Real Android build in CI + executable platform config | ✅ |
 | App icon, application id, display name, release signing config | ✅ |
 | Legal documents (privacy, terms, refunds) ready to publish | ✅ |
@@ -223,8 +224,6 @@ helpers). Nothing has yet run against a live Supabase project.
 
 **Product**
 
-- Collection and play still load one generous page (200 rows). Paging them means
-  moving search and filtering server-side.
 - No second parent: one account = one user. Both parents cannot share the same
   children.
 - No export or sharing of the weekly report (PDF / share sheet).

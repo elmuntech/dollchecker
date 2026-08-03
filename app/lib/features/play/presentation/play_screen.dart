@@ -9,20 +9,39 @@ import 'package:dollchecker/features/play/data/play_repository.dart';
 import 'package:dollchecker/features/play/domain/play_idea_entry.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
 import 'package:dollchecker/shared/widgets/error_retry.dart';
+import 'package:dollchecker/shared/widgets/load_more_footer.dart';
 
-/// Every play idea the analyzer has produced, filterable and favoritable.
-class PlayScreen extends ConsumerWidget {
+/// Every play idea the analyzer has produced, filterable and favoritable,
+/// loaded a page at a time as the feed is scrolled.
+class PlayScreen extends ConsumerStatefulWidget {
   const PlayScreen({super.key});
 
-  Future<void> _toggleFavorite(WidgetRef ref, PlayIdeaEntry idea) async {
-    await ref
-        .read(playRepositoryProvider)
-        .setFavorite(idea.id, !idea.isFavorited);
-    ref.invalidate(playIdeasProvider);
+  @override
+  ConsumerState<PlayScreen> createState() => _PlayScreenState();
+}
+
+class _PlayScreenState extends ConsumerState<PlayScreen> {
+  final _scroll = ScrollController();
+  late final EndOfListLoader _loader;
+
+  @override
+  void initState() {
+    super.initState();
+    _loader = EndOfListLoader(
+      _scroll,
+      () => ref.read(playIdeasProvider.notifier).loadMore(),
+    );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void dispose() {
+    _loader.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ideas = ref.watch(playIdeasProvider);
     final favoritesOnly = ref.watch(playFavoritesOnlyProvider);
@@ -60,14 +79,19 @@ class PlayScreen extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, __) =>
             ErrorRetry(onRetry: () => ref.invalidate(playIdeasProvider)),
-                data: (items) {
-                  if (items.isEmpty) {
+                data: (page) {
+                  if (page.isEmpty) {
                     final filtered = favoritesOnly || skillFilter != null;
                     return _Message(
                         text: filtered ? l.playNoMatches : l.playEmpty);
                   }
-                  final featured = ideaOfTheDay(items, DateTime.now());
+                  // Picked from the pages loaded so far rather than the whole
+                  // feed. The first page is the newest ideas, which is where a
+                  // parent wants today's suggestion to come from anyway.
+                  final featured = ideaOfTheDay(page.items, DateTime.now());
+                  final notifier = ref.read(playIdeasProvider.notifier);
                   return ListView(
+                    controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     children: [
                       if (featured != null) ...[
@@ -77,17 +101,22 @@ class PlayScreen extends ConsumerWidget {
                         _IdeaCard(
                           idea: featured,
                           highlighted: true,
-                          onFavorite: () => _toggleFavorite(ref, featured),
+                          onFavorite: () => notifier.toggleFavorite(featured),
                         ),
                         const SizedBox(height: 20),
                         Text(l.playIdeas,
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                       ],
-                      for (final idea in items)
+                      for (final idea in page.items)
                         _IdeaCard(
                           idea: idea,
-                          onFavorite: () => _toggleFavorite(ref, idea),
+                          onFavorite: () => notifier.toggleFavorite(idea),
+                        ),
+                      if (page.hasMore)
+                        LoadMoreFooter(
+                          loading: page.isLoadingMore,
+                          onLoadMore: notifier.loadMore,
                         ),
                     ],
                   );

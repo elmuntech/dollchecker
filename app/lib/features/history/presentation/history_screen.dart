@@ -7,6 +7,7 @@ import 'package:dollchecker/features/scan/domain/toy_analysis.dart';
 import 'package:dollchecker/features/scan/presentation/scan_controller.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
 import 'package:dollchecker/shared/widgets/error_retry.dart';
+import 'package:dollchecker/shared/widgets/load_more_footer.dart';
 import 'package:dollchecker/shared/widgets/safety_badge.dart';
 
 /// Every scan ever made, newest first, loaded a page at a time as the list is
@@ -21,27 +22,22 @@ class HistoryScreen extends ConsumerStatefulWidget {
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   final _controller = ScrollController();
+  late final EndOfListLoader _loader;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onScroll);
+    _loader = EndOfListLoader(
+      _controller,
+      () => ref.read(historyPageProvider.notifier).loadMore(),
+    );
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onScroll);
+    _loader.dispose();
     _controller.dispose();
     super.dispose();
-  }
-
-  /// Fetches the next page a little before the end, so the list rarely stops.
-  void _onScroll() {
-    if (!_controller.hasClients) return;
-    final position = _controller.position;
-    if (position.pixels >= position.maxScrollExtent - 400) {
-      ref.read(historyPageProvider.notifier).loadMore();
-    }
   }
 
   @override
@@ -67,7 +63,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   itemCount: page.length + (page.hasMore ? 1 : 0),
                   itemBuilder: (context, i) {
                     if (i >= page.length) {
-                      return _LoadMoreFooter(
+                      return LoadMoreFooter(
                         loading: page.isLoadingMore,
                         onLoadMore: () =>
                             ref.read(historyPageProvider.notifier).loadMore(),
@@ -98,36 +94,6 @@ class _HistoryRow extends StatelessWidget {
             ? Text('${scan.educationalScore}/100')
             : null,
         onTap: () => context.push('/scan/${scan.scanId}'),
-      ),
-    );
-  }
-}
-
-/// The end of the list while more remains.
-///
-/// A spinner only while a page is actually in flight — one that turns whenever
-/// there is more to fetch would claim the app is working when it is idle. The
-/// rest of the time it is a button, which also covers the case where the scroll
-/// listener never fires because everything already fits on screen.
-class _LoadMoreFooter extends StatelessWidget {
-  const _LoadMoreFooter({required this.loading, required this.onLoadMore});
-
-  final bool loading;
-  final VoidCallback onLoadMore;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Center(
-        child: loading
-            ? const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : TextButton(onPressed: onLoadMore, child: Text(l.loadMore)),
       ),
     );
   }

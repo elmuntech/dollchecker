@@ -7,6 +7,7 @@ import 'package:dollchecker/features/collection/domain/toy.dart';
 import 'package:dollchecker/features/scan/presentation/scan_controller.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
 import 'package:dollchecker/shared/widgets/error_retry.dart';
+import 'package:dollchecker/shared/widgets/load_more_footer.dart';
 import 'package:dollchecker/shared/widgets/safety_badge.dart';
 
 /// Every toy the user has scanned, deduplicated into one entry per toy.
@@ -19,15 +20,23 @@ class CollectionScreen extends ConsumerStatefulWidget {
 
 class _CollectionScreenState extends ConsumerState<CollectionScreen> {
   final _search = TextEditingController();
+  final _scroll = ScrollController();
+  late final EndOfListLoader _loader;
 
   @override
   void initState() {
     super.initState();
     _search.text = ref.read(collectionSearchProvider);
+    _loader = EndOfListLoader(
+      _scroll,
+      () => ref.read(collectionProvider.notifier).loadMore(),
+    );
   }
 
   @override
   void dispose() {
+    _loader.dispose();
+    _scroll.dispose();
     _search.dispose();
     super.dispose();
   }
@@ -94,19 +103,40 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, __) =>
               ErrorRetry(onRetry: () => ref.invalidate(collectionProvider)),
-                data: (items) {
-                  if (items.isEmpty) {
+                data: (page) {
+                  if (page.isEmpty) {
                     final noFilters = filter == CollectionFilter.all &&
                         ref.read(collectionSearchProvider).trim().isEmpty;
                     return _CenteredMessage(
-                      text: noFilters ? l.collectionEmpty : l.collectionNoMatches,
+                      text:
+                          noFilters ? l.collectionEmpty : l.collectionNoMatches,
                     );
                   }
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    gridDelegate: _gridDelegate,
-                    itemCount: items.length,
-                    itemBuilder: (context, i) => _ToyCard(toy: items[i]),
+                  // A grid cannot hold a full-width footer, so the footer is a
+                  // sliver of its own below the grid rather than a final tile.
+                  return CustomScrollView(
+                    controller: _scroll,
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                        sliver: SliverGrid.builder(
+                          gridDelegate: _gridDelegate,
+                          itemCount: page.length,
+                          itemBuilder: (context, i) =>
+                              _ToyCard(toy: page.items[i]),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: page.hasMore
+                            ? LoadMoreFooter(
+                                loading: page.isLoadingMore,
+                                onLoadMore: () => ref
+                                    .read(collectionProvider.notifier)
+                                    .loadMore(),
+                              )
+                            : const SizedBox(height: 24),
+                      ),
+                    ],
                   );
                 },
               ),

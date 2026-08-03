@@ -94,6 +94,10 @@ class ScanRepository {
   ///
   /// Paged rather than capped: the old fixed limit meant a family past it
   /// simply stopped seeing their older scans, with nothing to say so.
+  ///
+  /// `id` breaks ties on the timestamp. Without it the sort is not total, and
+  /// two scans sharing a `created_at` can land either side of a page boundary
+  /// on different requests — which shows one twice and hides the other.
   Future<List<ScanSummary>> history({
     int limit = kHistoryPageSize,
     int offset = 0,
@@ -102,6 +106,7 @@ class ScanRepository {
         .from('scans')
         .select('id, identification, safety_overall, educational_score, created_at')
         .order('created_at', ascending: false)
+        .order('id', ascending: false)
         .range(offset, offset + limit - 1);
     return (rows as List)
         .map((r) => ScanSummary.fromRow(Map<String, dynamic>.from(r as Map)))

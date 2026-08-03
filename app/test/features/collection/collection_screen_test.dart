@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/paging/paged_list.dart';
 import 'package:dollchecker/features/collection/data/toy_repository.dart';
 import 'package:dollchecker/features/collection/domain/toy.dart';
 import 'package:dollchecker/features/collection/presentation/collection_screen.dart';
@@ -26,13 +27,18 @@ void main() {
     WidgetTester tester,
     List<Toy> toys, {
     Locale locale = const Locale('en'),
+    bool hasMore = false,
+    _StubCollection? stub,
   }) {
     return pumpApp(
       tester,
       const CollectionScreen(),
       locale: locale,
       overrides: [
-        collectionProvider.overrideWith((ref) async => toys),
+        collectionProvider.overrideWith(
+          () =>
+              stub ?? _StubCollection(PagedList(items: toys, hasMore: hasMore)),
+        ),
         // Images live in a private bucket; the signed URL needs a live client.
         signedImageProvider.overrideWith((ref, arg) async => null),
       ],
@@ -86,10 +92,46 @@ void main() {
     expect(find.text('Blocks'), findsOneWidget);
   });
 
+  testWidgets('offers the next page instead of stopping at a hidden cap',
+      (tester) async {
+    await pumpCollection(tester, [toy('Blocks')], hasMore: true);
+    expect(find.text('Load more'), findsOneWidget);
+    // Idle, not loading — the footer must not claim the app is busy.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('no footer once the collection has ended', (tester) async {
+    await pumpCollection(tester, [toy('Blocks')]);
+    expect(find.text('Load more'), findsNothing);
+  });
+
+  testWidgets('tapping the footer asks for the next page', (tester) async {
+    final stub = _StubCollection(
+      PagedList(items: [toy('Blocks')], hasMore: true),
+    );
+    await pumpCollection(tester, const [], stub: stub);
+    await tester.tap(find.text('Load more'));
+    await tester.pumpAndSettle();
+    expect(stub.loadMoreCalls, 1);
+  });
+
   testWidgets('renders in Russian', (tester) async {
     await pumpCollection(tester, [toy('Blocks')],
         locale: const Locale('ru'));
     expect(find.text('Коллекция'), findsOneWidget);
     expect(find.text('Хочу купить'), findsOneWidget);
   });
+}
+
+class _StubCollection extends CollectionPageController {
+  _StubCollection(this._page);
+  final PagedList<Toy> _page;
+
+  int loadMoreCalls = 0;
+
+  @override
+  Future<PagedList<Toy>> build() async => _page;
+
+  @override
+  Future<void> loadMore() async => loadMoreCalls++;
 }
