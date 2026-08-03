@@ -67,8 +67,13 @@ jobs:
       # android/ and ios/ are not committed, so the build starts from a
       # freshly generated project — which is also what proves that
       # tool/configure_platform.py still applies cleanly to it.
+      #
+      # iOS is generated too even though only Android is built here: the icon
+      # set covers both platforms, and it means the script's Info.plist and
+      # Xcode-project edits are exercised on every PR rather than only on
+      # somebody's Mac.
       - name: Generate platform folders
-        run: flutter create --platforms=android --project-name dollchecker .
+        run: flutter create --platforms=android,ios --project-name dollchecker .
 
       - name: Apply platform configuration
         run: python3 ../tool/configure_platform.py .

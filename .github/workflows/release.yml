@@ -61,8 +61,10 @@ jobs:
           test -s .env
           grep -q "YOUR-PROJECT" .env && { echo "SUPABASE_URL secret is unset"; exit 1; } || true
 
+      # iOS is generated for the icon set, which covers both platforms; only
+      # the Android artifacts are built here.
       - name: Generate platform folders
-        run: flutter create --platforms=android --project-name dollchecker .
+        run: flutter create --platforms=android,ios --project-name dollchecker .
 
       - name: Apply platform configuration
         run: python3 ../tool/configure_platform.py . --release-signing
