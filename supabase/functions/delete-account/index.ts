@@ -50,7 +50,9 @@ Deno.serve(async (req) => {
     if (authErr || !user) return json(401, { error: "invalid_token" });
 
     const body = await req.json().catch(() => null);
-    if (!isConfirmed(body)) return json(400, { error: "confirmation_required" });
+    if (!isConfirmed(body)) {
+      return json(400, { error: "confirmation_required" });
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
