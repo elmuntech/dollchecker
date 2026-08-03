@@ -70,8 +70,12 @@ Polar docs rather than assuming.
 
 ## 4. Platform config (in the generated `android/` + `ios/` folders)
 
-These folders are not committed (`flutter create` regenerates them), so each
-item has to be applied once when the release project is set up.
+These folders are not committed (`flutter create` regenerates them). Everything
+in the table below is applied for you by **`python3 tool/configure_platform.py app`**
+— run it after `flutter create`, and re-run it freely, it is idempotent. CI runs
+it on every pull request, so it cannot drift from what the app needs.
+
+The two rows it cannot do for you — icons and signing — are marked.
 
 | Item | Where | Blocks |
 |------|-------|--------|
@@ -81,7 +85,8 @@ item has to be applied once when the release project is set up.
 | `POST_NOTIFICATIONS` permission + `SCHEDULE_EXACT_ALARM` not needed (inexact scheduling is used deliberately) | `AndroidManifest.xml` | Daily reminders on Android 13+ |
 | Notification icon `@mipmap/ic_launcher` present (default from `flutter create`) | `android/app/src/main/res` | Android reminder rendering |
 | Notification capability + `UNUserNotificationCenter` delegate (added by the plugin) | Xcode | iOS reminders |
-| Release signing (keystore, provisioning profiles) | `android/key.properties`, Xcode | Any release build |
+| Release signing (keystore, provisioning profiles) — **manual** | `android/key.properties`, Xcode | Any release build |
+| App icon / splash from the source assets — **manual** | `flutter_launcher_icons` or by hand | Store submission |
 
 ## 5. Optional / later
 

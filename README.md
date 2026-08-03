@@ -57,6 +57,7 @@ supabase/
   functions/polar-billing/index.ts            Polar checkout + customer portal links
   functions/polar-webhook/index.ts            Polar events → account tier (only writer)
 docs/INTEGRATIONS.md      third-party setup still to be wired (keys, URLs, store accounts)
+tool/configure_platform.py  applies manifest / gradle / plist config to a generated project
 .github/workflows/ci.yml  analyze + test, Flutter and Deno
 ```
 
@@ -91,6 +92,10 @@ $EDITOR .env
 
 # Generate the platform folders (android/ ios/), which are not committed:
 flutter create --platforms=android,ios --project-name dollchecker .
+
+# Apply the platform configuration the app needs (permissions, deep link,
+# desugaring, iOS usage strings). Idempotent — safe to re-run:
+python3 ../tool/configure_platform.py .
 
 flutter pub get        # also runs gen-l10n (generate: true in pubspec)
 flutter run
@@ -245,7 +250,10 @@ deno test supabase/functions/analyze-toy/   # Edge Function helpers (no network 
 ```
 
 CI runs `flutter analyze --fatal-infos`, `flutter test`, `deno fmt --check`,
-`deno check` and `deno test` on every pull request.
+`deno check` and `deno test` on every pull request — and builds a debug APK from
+a freshly generated Android project, which compiles every plugin's native code
+and proves `tool/configure_platform.py` still applies to the current Flutter
+template. The APK is uploaded as a build artifact.
 
 ## Roadmap
 
