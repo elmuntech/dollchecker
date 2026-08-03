@@ -109,6 +109,8 @@ Set under Settings → Secrets and variables → Actions. Full instructions in
 |------|---------|--------|
 | Sentry DSN | Crash reporting | ⬜ |
 | An alert on `ai_usage_last_day` (a scheduled query, or Supabase log drain) | Noticing model abuse before the invoice does | ⬜ |
+| Turnstile or hCaptcha site key + secret, set under Supabase → Auth → Bot and Abuse Protection | Stops scripted signups from minting free quota faster than the per-user limits can bound it | ⬜ |
+| Supabase → Auth → "Confirm email" left **on** | Same: an unconfirmed address costs an attacker nothing | ⬜ |
 | Analytics key (PostHog / Firebase) | Funnel + retention | ⬜ |
 | FCM / APNs keys | Remote push only — the shipped daily reminder is local and needs no keys | ⬜ |
 | Toy recall data source | Real recall checks instead of AI-only guidance | ⬜ |

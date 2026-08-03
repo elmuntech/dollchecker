@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/paging/paged_list.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/play/data/play_repository.dart';
 import 'package:dollchecker/features/play/domain/play_idea_entry.dart';
@@ -32,6 +33,8 @@ void main() {
     WidgetTester tester,
     List<PlayIdeaEntry> ideas, {
     Locale locale = const Locale('en'),
+    bool hasMore = false,
+    _StubPlay? stub,
   }) {
     return pumpApp(
       tester,
@@ -40,7 +43,9 @@ void main() {
       overrides: [
         childrenProvider
             .overrideWith((ref) async => [const ChildProfile(id: 'c1', name: 'Alma')]),
-        playIdeasProvider.overrideWith((ref) async => ideas),
+        playIdeasProvider.overrideWith(
+          () => stub ?? _StubPlay(PagedList(items: ideas, hasMore: hasMore)),
+        ),
       ],
     );
   }
@@ -105,9 +110,64 @@ void main() {
     expect(container.read(playSkillFilterProvider), 'creativity');
   });
 
+  testWidgets('offers the next page instead of stopping at a hidden cap',
+      (tester) async {
+    await pumpPlay(tester, [idea('Rainbow tower')], hasMore: true);
+    expect(find.text('Load more'), findsOneWidget);
+    // Idle, not loading — the footer must not claim the app is busy.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('no footer once the feed has ended', (tester) async {
+    await pumpPlay(tester, [idea('Rainbow tower')]);
+    expect(find.text('Load more'), findsNothing);
+  });
+
+  testWidgets('tapping the footer asks for the next page', (tester) async {
+    final stub = _StubPlay(
+      PagedList(items: [idea('Rainbow tower')], hasMore: true),
+    );
+    await pumpPlay(tester, const [], stub: stub);
+    await tester.tap(find.text('Load more'));
+    await tester.pumpAndSettle();
+    expect(stub.loadMoreCalls, 1);
+  });
+
+  testWidgets('the star toggles in place rather than reloading the feed',
+      (tester) async {
+    final stub = _StubPlay(
+      PagedList(items: [idea('Rainbow tower')], hasMore: false),
+    );
+    await pumpPlay(tester, const [], stub: stub);
+    // The featured card and the list row both show the same idea; either
+    // star is the one under test.
+    await tester.tap(find.byIcon(Icons.star_border).first);
+    await tester.pumpAndSettle();
+    expect(stub.favorited, ['idea-Rainbow tower']);
+  });
+
   testWidgets('renders in Russian', (tester) async {
     await pumpPlay(tester, [idea('Башня')], locale: const Locale('ru'));
     expect(find.text('Игровой коуч'), findsOneWidget);
     expect(find.text('Идея дня'), findsOneWidget);
   });
+}
+
+class _StubPlay extends PlayPageController {
+  _StubPlay(this._page);
+  final PagedList<PlayIdeaEntry> _page;
+
+  int loadMoreCalls = 0;
+  final List<String> favorited = [];
+
+  @override
+  Future<PagedList<PlayIdeaEntry>> build() async => _page;
+
+  @override
+  Future<void> loadMore() async => loadMoreCalls++;
+
+  @override
+  Future<void> toggleFavorite(PlayIdeaEntry idea) async {
+    favorited.add(idea.id);
+  }
 }
