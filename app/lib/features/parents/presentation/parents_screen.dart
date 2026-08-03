@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:dollchecker/core/config/legal_links.dart';
+import 'package:dollchecker/core/utils/external_link.dart';
+import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/child_switcher.dart';
 import 'package:dollchecker/features/collection/domain/toy.dart';
@@ -65,6 +68,9 @@ class ParentsScreen extends ConsumerWidget {
             Text(l.account, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             const _AccountSection(),
+            const _LegalSection(),
+            const SizedBox(height: 8),
+            const _DeleteAccountTile(),
           ],
         ),
       ),
@@ -379,6 +385,134 @@ class _AccountSection extends ConsumerWidget {
             onTap: () => context.push('/settings'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Privacy policy, terms and support. Rows appear only once the corresponding
+/// URL is published (see `docs/INTEGRATIONS.md`).
+class _LegalSection extends ConsumerWidget {
+  const _LegalSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final links = ref.watch(legalLinksProvider);
+    if (links.isEmpty) return const SizedBox.shrink();
+
+    final privacy = links.privacyUrl;
+    final terms = links.termsUrl;
+    final support = links.supportUri;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.legal, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                if (privacy != null)
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: Text(l.privacyPolicy),
+                    trailing: const Icon(Icons.open_in_new, size: 18),
+                    onTap: () => openExternalUrl(privacy),
+                  ),
+                if (terms != null)
+                  ListTile(
+                    leading: const Icon(Icons.description_outlined),
+                    title: Text(l.termsOfService),
+                    trailing: const Icon(Icons.open_in_new, size: 18),
+                    onTap: () => openExternalUrl(terms),
+                  ),
+                if (support != null)
+                  ListTile(
+                    leading: const Icon(Icons.mail_outline),
+                    title: Text(l.contactSupport),
+                    trailing: const Icon(Icons.open_in_new, size: 18),
+                    onTap: () => openExternalUri(support),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Account deletion, which both app stores require to be reachable from inside
+/// the app. Destructive and irreversible, so it sits on its own and states
+/// exactly what disappears before doing anything.
+class _DeleteAccountTile extends ConsumerStatefulWidget {
+  const _DeleteAccountTile();
+
+  @override
+  ConsumerState<_DeleteAccountTile> createState() => _DeleteAccountTileState();
+}
+
+class _DeleteAccountTileState extends ConsumerState<_DeleteAccountTile> {
+  bool _busy = false;
+
+  Future<void> _delete() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l.deleteAccount),
+        content: Text(l.deleteAccountConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.deleteAccountAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(authRepositoryProvider).deleteAccount();
+      // Signing out inside the repository sends the router back to /auth, so
+      // there is no screen left to update — only the message survives.
+      messenger.showSnackBar(SnackBar(content: Text(l.accountDeleted)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l.deleteAccountFailed)));
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: ListTile(
+        leading: _busy
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(Icons.delete_forever_outlined, color: scheme.error),
+        title: Text(l.deleteAccount, style: TextStyle(color: scheme.error)),
+        subtitle: Text(l.deleteAccountHint),
+        onTap: _busy ? null : _delete,
       ),
     );
   }
