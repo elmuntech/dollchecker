@@ -8,6 +8,9 @@ verify_jwt = true
 [functions.delete-account]
 verify_jwt = true
 
+[functions.chat-toy]
+verify_jwt = true
+
 [functions.polar-billing]
 verify_jwt = true
 

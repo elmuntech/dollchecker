@@ -16,8 +16,8 @@ non-functional until it is done.
 |------|---------------|--------|--------|
 | Project ref + URL + anon key | `app/.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) | The whole app | ⬜ |
 | `ANTHROPIC_API_KEY` | `supabase secrets set` | Toy analysis, AI chat | ⬜ |
-| `supabase db push` for migrations `0001`–`0004` | Supabase project | Everything | ⬜ |
-| Deploy `analyze-toy`, `delete-account`, `polar-billing` | `supabase functions deploy <name>` | Scanning, account deletion, checkout | ⬜ |
+| `supabase db push` for migrations `0001`–`0005` | Supabase project | Everything | ⬜ |
+| Deploy `analyze-toy`, `chat-toy`, `delete-account`, `polar-billing` | `supabase functions deploy <name>` | Scanning, chat, account deletion, checkout | ⬜ |
 | Deploy `polar-webhook` **with `--no-verify-jwt`** | `supabase functions deploy polar-webhook --no-verify-jwt` | Tier upgrades (Polar sends no JWT; the signature check authenticates it) | ⬜ |
 | Auth → URL configuration → **Redirect URLs**: add `dollchecker://auth-callback` | Supabase dashboard | Password-reset deep link | ⬜ |
 | Auth → Email templates: confirm-signup and reset-password wording/branding | Supabase dashboard | Nice-to-have | ⬜ |

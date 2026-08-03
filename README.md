@@ -37,6 +37,7 @@ app/                      Flutter application
       development             skill dashboard (radar, strengths, gaps)
       parents                 parents panel (household week, safety review, account)
       billing                 Polar paywall, checkout and portal
+      chat                    follow-up conversation about a scanned toy
       reminders               daily local notification (schedule, permission, settings)
       play                    Play Coach feed + favorites
       profile                 subscription tier and scan quota
@@ -48,9 +49,11 @@ supabase/
   migrations/0002_v1_collection_dashboard.sql toy identity, aggregates, RPCs
   migrations/0003_daily_missions.sql          daily missions + toy rotation
   migrations/0004_billing.sql                 subscription state, locked-down profile columns
+  migrations/0005_toy_chat.sql                chat threads, one per scan
   functions/analyze-toy/index.ts              Claude vision proxy
   functions/analyze-toy/utils.ts              pure helpers (quota, toy identity)
   functions/delete-account/index.ts           account + storage deletion (store requirement)
+  functions/chat-toy/index.ts                 follow-up chat about a scanned toy (premium)
   functions/polar-billing/index.ts            Polar checkout + customer portal links
   functions/polar-webhook/index.ts            Polar events → account tier (only writer)
 docs/INTEGRATIONS.md      third-party setup still to be wired (keys, URLs, store accounts)
@@ -142,6 +145,22 @@ development aggregate per child. Both queries deliberately over-fetch by a few h
 because a date bound in UTC cannot express a local calendar day — `HouseholdReport.build`
 trims the window to local days, so a scan at 23:00 counts for the day the parent made it.
 
+### Ask about this toy
+
+The analysis answers "is this toy any good?". Everything a parent asks next had
+nowhere to go, so each scan now has a thread: `chat-toy` answers with the stored
+analysis and the child's age as context, and both turns are written server-side.
+
+- **Premium only.** A scan is one bounded call; a conversation has no natural end, so
+  a free tier here is an unmetered model bill per user. A free account gets the paywall,
+  not an error.
+- The client can read and delete its messages but cannot insert them. A client that
+  could write an `assistant` row could put words in the model's mouth and have them
+  replayed as context on the next turn — `toHistory` drops anything with an unexpected
+  role for the same reason.
+- Only the parts of the analysis a parent asks about travel back as context; paying to
+  re-read the whole stored object every turn is waste, not context.
+
 ### Reminders
 
 The mission loop only works if something brings the parent back, so the app can post
@@ -231,7 +250,7 @@ CI runs `flutter analyze --fatal-infos`, `flutter test`, `deno fmt --check`,
 ## Roadmap
 
 - **V1** — ✅ toy collection, ✅ development dashboard, ✅ Play Coach surface; subscriptions (RevenueCat) and offline history still open.
-- **V2** — ✅ daily missions + gamification, ✅ toy rotation, ✅ parents panel; AI chat still open.
+- **V2** — ✅ daily missions + gamification, ✅ toy rotation, ✅ parents panel, ✅ AI chat.
 - **V3** — pgvector RAG (similar toys, semantic search), shopping assistant, trends & reports.
 
 ## Safety disclaimer
