@@ -259,10 +259,11 @@ filled in and published, the upload keystore, and the store accounts themselves.
 
 ## 10. What is waiting on external setup
 
-Tracked in full in `docs/INTEGRATIONS.md` (29 open items). Summary:
+Tracked in full in `docs/INTEGRATIONS.md`, which is the count of record — a
+number repeated here only goes stale. Summary:
 
 1. **Supabase** — `ANTHROPIC_API_KEY`, `supabase db push` for migrations
-   0001–0005, deploy five functions (`polar-webhook` with `--no-verify-jwt`),
+   0001–0006, deploy five functions (`polar-webhook` with `--no-verify-jwt`),
    add `dollchecker://auth-callback` to Redirect URLs, production SMTP.
 2. **Polar** — organization + product, six secrets, webhook endpoint subscribed
    to `subscription.*` and `order.paid`, sandbox → production at launch.
