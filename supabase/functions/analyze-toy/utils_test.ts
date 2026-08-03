@@ -55,12 +55,6 @@ Deno.test("monthsSince counts whole months only", () => {
   deepStrictEqual(monthsSince("not-a-date", now), 0);
 });
 
-
-
-
-
-
-
 Deno.test("toyImagePath is namespaced by user id, matching storage RLS", () => {
   const path = toyImagePath("user-1", "image/png", "abc");
   deepStrictEqual(path, "user-1/abc.png");
