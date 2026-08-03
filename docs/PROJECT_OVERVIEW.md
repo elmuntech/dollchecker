@@ -242,7 +242,9 @@ filled in and published, the upload keystore, and the store accounts themselves.
 **Engineering**
 
 - No crash reporting (Sentry) or product analytics — both need external keys.
-- No integration/E2E tests; Edge Function handlers untested.
+- No integration/E2E tests. Edge Function *handlers* are still untested — the
+  pure modules they call are covered, including the webhook MAC against the
+  Standard Webhooks reference vector, but the request flow itself is not.
 - iOS is unbuilt in CI (needs a macOS runner) and unresolved on IAP.
 - `pubspec.lock` is tracked but not yet committed — it needs a resolver run
   (`flutter pub get`, or the `pubspec-lock` CI artifact). Until it exists,

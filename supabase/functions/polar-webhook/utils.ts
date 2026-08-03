@@ -14,7 +14,7 @@ export const TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
  * distributed base64-encoded behind a `whsec_` prefix. A secret that is neither
  * is used as raw bytes, which is what a hand-set test secret looks like.
  */
-export function decodeWebhookSecret(secret: string): Uint8Array {
+export function decodeWebhookSecret(secret: string): Uint8Array<ArrayBuffer> {
   const raw = secret.startsWith("whsec_") ? secret.slice(6) : secret;
   try {
     const bin = atob(raw);
@@ -22,7 +22,11 @@ export function decodeWebhookSecret(secret: string): Uint8Array {
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   } catch {
-    return new TextEncoder().encode(raw);
+    // Copied rather than returned directly: Web Crypto will not import a key
+    // backed by a SharedArrayBuffer, and the plain `Uint8Array` this used to
+    // be annotated as allows one. `Uint8Array.from` pins the buffer type no
+    // matter what `TextEncoder.encode` is declared to return.
+    return Uint8Array.from(new TextEncoder().encode(raw));
   }
 }
 
@@ -33,6 +37,47 @@ export function signedPayload(
   body: string,
 ): string {
   return `${id}.${timestamp}.${body}`;
+}
+
+/** HMAC-SHA256 of `payload` under `key`, base64 — the Standard Webhooks MAC. */
+export async function hmacSha256Base64(
+  key: Uint8Array<ArrayBuffer>,
+  payload: string,
+): Promise<string> {
+  const imported = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign(
+    "HMAC",
+    imported,
+    new TextEncoder().encode(payload),
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(mac)));
+}
+
+/**
+ * The signature a delivery must carry to be ours.
+ *
+ * Lives here rather than in the handler so it can be tested: this is the only
+ * thing standing between anyone on the internet and the column that decides
+ * who has paid. A bug that rejects valid deliveries is loud — subscriptions
+ * silently stop applying — but a bug that signs the wrong bytes is not, and
+ * that is the one worth a known-answer test.
+ */
+export function expectedSignature(
+  secret: string,
+  id: string,
+  timestamp: string,
+  body: string,
+): Promise<string> {
+  return hmacSha256Base64(
+    decodeWebhookSecret(secret),
+    signedPayload(id, timestamp, body),
+  );
 }
 
 /**
