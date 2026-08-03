@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:dollchecker/core/config/legal_links.dart';
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/billing/data/billing_repository.dart';
@@ -405,13 +406,19 @@ class _PlanTileState extends ConsumerState<_PlanTile> {
 
   Future<void> _openPortal() async {
     final messenger = ScaffoldMessenger.of(context);
-    final failed = AppLocalizations.of(context).portalFailed;
+    final l = AppLocalizations.of(context);
+    final failed = l.portalFailed;
+    final tooFast = l.rateLimited;
 
     setState(() => _busy = true);
     try {
       final url = await ref.read(billingRepositoryProvider).portalUrl();
       final opened = await ref.read(externalLauncherProvider)(Uri.parse(url));
       if (!opened) messenger.showSnackBar(SnackBar(content: Text(failed)));
+    } on RateLimitedException {
+      // Nothing broke; the portal was asked for too often. "Could not open"
+      // would send the user back to the button, into the same limit.
+      messenger.showSnackBar(SnackBar(content: Text(tooFast)));
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(failed)));
     } finally {
@@ -551,6 +558,10 @@ class _DeleteAccountTileState extends ConsumerState<_DeleteAccountTile> {
       // Signing out inside the repository sends the router back to /auth, so
       // there is usually no screen left to update — only the message survives.
       messenger.showSnackBar(SnackBar(content: Text(l.accountDeleted)));
+    } on RateLimitedException {
+      // The account still exists. Reporting a failed deletion would be a
+      // frightening thing to say wrongly.
+      messenger.showSnackBar(SnackBar(content: Text(l.rateLimited)));
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l.deleteAccountFailed)));
     } finally {

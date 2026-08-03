@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/profile/data/profile_repository.dart';
 
@@ -32,6 +33,9 @@ class BillingRepository {
     try {
       final res = await _client.functions.invoke('polar-billing', body: body);
       if (res.status == 503) throw BillingUnavailableException();
+      // Not a failed purchase. Saying "checkout failed" would send the user
+      // straight back to the button, into the same limit.
+      if (res.status == 429) throw rateLimitedFrom(res.data);
       if (res.status != 200 || res.data == null) {
         throw BillingFailedException();
       }
@@ -39,6 +43,7 @@ class BillingRepository {
     } on FunctionException catch (e) {
       // Newer supabase_flutter throws instead of returning a non-2xx status.
       if (e.status == 503) throw BillingUnavailableException();
+      if (e.status == 429) throw rateLimitedFrom(e.details);
       throw BillingFailedException();
     }
 

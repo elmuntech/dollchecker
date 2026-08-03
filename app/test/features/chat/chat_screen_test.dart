@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/chat/data/chat_repository.dart';
 import 'package:dollchecker/features/chat/domain/chat_message.dart';
 import 'package:dollchecker/features/chat/presentation/chat_screen.dart';
@@ -43,7 +44,7 @@ class FakeChatRepository implements ChatRepository {
   }) async {
     asked.add(question);
     if (premiumRequired) throw ChatPremiumRequiredException();
-    if (rateLimited) throw ChatRateLimitedException();
+    if (rateLimited) throw const RateLimitedException(30);
     if (fails) throw ChatFailedException();
     return reply;
   }

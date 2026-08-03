@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/scan/domain/toy_analysis.dart';
 
@@ -14,14 +15,6 @@ const kHistoryPageSize = 30;
 /// which is why the server says 402 rather than 429.
 class QuotaExceededException implements Exception {}
 
-/// Too many requests in too short a time. Unlike a spent quota this resolves by
-/// itself, so the message says when to try again rather than offering to sell
-/// something.
-class RateLimitedException implements Exception {
-  const RateLimitedException([this.retryAfterSeconds]);
-  final int? retryAfterSeconds;
-}
-
 class AnalysisException implements Exception {
   final String message;
   AnalysisException(this.message);
@@ -30,20 +23,6 @@ class AnalysisException implements Exception {
 final scanRepositoryProvider = Provider<ScanRepository>((ref) {
   return ScanRepository(ref.watch(supabaseProvider));
 });
-
-/// Reads `retry_after` out of whatever shape the error arrived in.
-///
-/// The body is a decoded map on one path and an opaque `details` object on the
-/// other, and either may be missing the field entirely — a limit with no stated
-/// wait is still a limit, so the exception is thrown regardless.
-RateLimitedException rateLimitedFrom(Object? payload) {
-  if (payload is Map) {
-    final seconds = payload['retry_after'];
-    if (seconds is int) return RateLimitedException(seconds);
-    if (seconds is String) return RateLimitedException(int.tryParse(seconds));
-  }
-  return const RateLimitedException();
-}
 
 class ScanRepository {
   ScanRepository(this._client);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/chat/data/chat_repository.dart';
 import 'package:dollchecker/features/chat/domain/chat_message.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
@@ -68,7 +69,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
     } on ChatPremiumRequiredException {
       if (mounted) setState(() => _premiumRequired = true);
-    } on ChatRateLimitedException {
+    } on RateLimitedException {
       if (mounted) setState(() => _rateLimited = true);
     } catch (_) {
       if (mounted) setState(() => _failed = true);
