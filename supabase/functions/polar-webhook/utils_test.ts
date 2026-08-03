@@ -208,8 +208,12 @@ Deno.test("every signed field actually changes the MAC", async () => {
     ),
     expectedSignature(VECTOR.secret, VECTOR.id, "1614265331", VECTOR.body),
     expectedSignature(VECTOR.secret, VECTOR.id, VECTOR.timestamp, "{}"),
-    expectedSignature("whsec_" + btoa("another secret"), VECTOR.id,
-      VECTOR.timestamp, VECTOR.body),
+    expectedSignature(
+      "whsec_" + btoa("another secret"),
+      VECTOR.id,
+      VECTOR.timestamp,
+      VECTOR.body,
+    ),
   ]);
 
   for (const variant of variants) {
