@@ -542,10 +542,13 @@ class _DeleteAccountTileState extends ConsumerState<_DeleteAccountTile> {
     try {
       await ref.read(authRepositoryProvider).deleteAccount();
       // Signing out inside the repository sends the router back to /auth, so
-      // there is no screen left to update — only the message survives.
+      // there is usually no screen left to update — only the message survives.
       messenger.showSnackBar(SnackBar(content: Text(l.accountDeleted)));
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l.deleteAccountFailed)));
+    } finally {
+      // Always stop the spinner, including on the success path: leaving one
+      // running forever is a lie if the navigation has not happened yet.
       if (mounted) setState(() => _busy = false);
     }
   }

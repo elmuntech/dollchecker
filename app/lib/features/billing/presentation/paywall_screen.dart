@@ -51,11 +51,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     if (mounted) setState(() => _stage = _Stage.waiting);
     final upgraded = await billing.waitForPremium();
     if (!mounted) return;
-    if (upgraded) {
-      Navigator.of(context).maybePop();
-      return;
-    }
-    setState(() => _stage = _Stage.timedOut);
+    // Settle the stage either way. Popping is best-effort — the paywall may be
+    // the only route on the stack — and a spinner left running after the answer
+    // arrived would say the app is still working when it is not.
+    setState(() => _stage = upgraded ? _Stage.idle : _Stage.timedOut);
+    if (upgraded) Navigator.of(context).maybePop();
   }
 
   Future<void> _recheck() async {
@@ -64,11 +64,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         .read(billingRepositoryProvider)
         .waitForPremium(timeout: const Duration(seconds: 6));
     if (!mounted) return;
-    if (upgraded) {
-      Navigator.of(context).maybePop();
-      return;
-    }
-    setState(() => _stage = _Stage.timedOut);
+    setState(() => _stage = upgraded ? _Stage.idle : _Stage.timedOut);
+    if (upgraded) Navigator.of(context).maybePop();
   }
 
   @override
