@@ -244,8 +244,9 @@ filled in and published, the upload keystore, and the store accounts themselves.
 - No crash reporting (Sentry) or product analytics — both need external keys.
 - No integration/E2E tests; Edge Function handlers untested.
 - iOS is unbuilt in CI (needs a macOS runner) and unresolved on IAP.
-- `pubspec.lock` is gitignored and `intl: any` — builds are not fully
-  reproducible.
+- `pubspec.lock` is tracked but not yet committed — it needs a resolver run
+  (`flutter pub get`, or the `pubspec-lock` CI artifact). Until it exists,
+  and while `intl: any` stands, builds re-resolve rather than reproduce.
 - Nothing has been deployed or run against real infrastructure yet.
 
 ---

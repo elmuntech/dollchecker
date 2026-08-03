@@ -44,6 +44,18 @@ jobs:
       - name: Test
         run: flutter test
 
+      # The lockfile belongs in the repository (see .gitignore), but it can
+      # only be produced by a resolver. Until it is committed, this is where
+      # to get one: download it, drop it in app/, commit it. Once it is
+      # tracked, `flutter pub get` above honours it and this artifact just
+      # confirms it did not change.
+      - name: Upload resolved pubspec.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: pubspec-lock
+          path: app/pubspec.lock
+          if-no-files-found: error
+
   android:
     name: Android build
     runs-on: ubuntu-latest
