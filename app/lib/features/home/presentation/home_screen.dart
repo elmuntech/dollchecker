@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/utils/image_input.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/child_switcher.dart';
@@ -92,9 +93,11 @@ class HomeScreen extends ConsumerWidget {
                       if (quota != null) ...[
                         const SizedBox(height: 12),
                         QuotaLine(quota: quota),
-                        // Only free accounts see a way to upgrade, and only the
-                        // exhausted ones see it as the obvious next step.
-                        if (!quota.isPremium)
+                        // Only free accounts see a way to upgrade, and only
+                        // where premium can actually be bought — a button
+                        // leading to "not available here" is worse than none.
+                        if (!quota.isPremium &&
+                            ref.watch(billingAllowedProvider))
                           TextButton(
                             onPressed: () => context.push('/paywall'),
                             child: Text(l.upgrade),

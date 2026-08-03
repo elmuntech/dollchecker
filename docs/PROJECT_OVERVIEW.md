@@ -210,6 +210,7 @@ helpers). Nothing has yet run against a live Supabase project.
 | Account deletion (store requirement) + storage cleanup | ✅ |
 | Legal / support links (hidden until published) | ✅ |
 | Subscriptions: checkout, customer portal, webhook, paywall | ✅ |
+| Purchase path hidden where the store forbids it, tier still honoured | ✅ |
 | Daily reminder with permission handling | ✅ |
 | Per-scan AI chat | ✅ |
 | History, collection and play paged — no list stops at a hidden cap | ✅ |
@@ -245,7 +246,10 @@ filled in and published, the upload keystore, and the store accounts themselves.
 - No integration/E2E tests. Edge Function *handlers* are still untested — the
   pure modules they call are covered, including the webhook MAC against the
   Standard Webhooks reference vector, but the request flow itself is not.
-- iOS is unbuilt in CI (needs a macOS runner) and unresolved on IAP.
+- iOS ships without a purchase path (`kAllowIosCheckout = false`), which is the
+  conservative reading of App Store guidelines 3.1.1 and 3.1.3 rather than a
+  resolved IAP integration. CI can build iOS on demand (`workflow_dispatch`),
+  but no `.ipa` is produced — that needs a signing identity.
 - `pubspec.lock` is tracked but not yet committed — it needs a resolver run
   (`flutter pub get`, or the `pubspec-lock` CI artifact). Until it exists,
   and while `intl: any` stands, builds re-resolve rather than reproduce.

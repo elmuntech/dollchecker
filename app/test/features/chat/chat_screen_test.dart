@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/chat/data/chat_repository.dart';
 import 'package:dollchecker/features/chat/domain/chat_message.dart';
@@ -55,13 +56,17 @@ void main() {
     WidgetTester tester,
     FakeChatRepository repo, {
     Locale locale = const Locale('en'),
+    bool canBuy = true,
   }) {
     return pumpApp(
       tester,
       const ChatScreen(scanId: 'scan-1'),
       locale: locale,
       surfaceSize: const Size(600, 1200),
-      overrides: [chatRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(repo),
+        billingAllowedProvider.overrideWithValue(canBuy),
+      ],
     );
   }
 
@@ -126,6 +131,22 @@ void main() {
 
     expect(find.text('Chat is part of Premium'), findsOneWidget);
     expect(find.text('Upgrade'), findsOneWidget);
+  });
+
+  testWidgets('still explains the lock where premium cannot be bought',
+      (tester) async {
+    await pumpChat(
+      tester,
+      FakeChatRepository(premiumRequired: true),
+      canBuy: false,
+    );
+    await tester.enterText(find.byType(TextField), 'Is it loud?');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    // Why it is locked is always worth saying; where to buy is not.
+    expect(find.text('Chat is part of Premium'), findsOneWidget);
+    expect(find.text('Upgrade'), findsNothing);
   });
 
   testWidgets('a failure says so and keeps the question on screen',

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:dollchecker/core/config/legal_links.dart';
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/auth/data/auth_repository.dart';
@@ -430,6 +431,10 @@ class _PlanTileState extends ConsumerState<_PlanTile> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final quota = widget.quota;
+    // Both actions leave the app for the provider's pages, which is exactly
+    // what iOS does not allow for a digital subscription. The tier itself is
+    // still shown — a premium account should say so wherever it was bought.
+    final canBuy = ref.watch(billingAllowedProvider);
 
     return ListTile(
       leading: const Icon(Icons.workspace_premium_outlined),
@@ -439,21 +444,23 @@ class _PlanTileState extends ConsumerState<_PlanTile> {
             ? '${l.planPremium} · ${l.unlimitedScans}'
             : '${l.planFree} · ${l.scansLeft(quota.remaining ?? 0)}',
       ),
-      trailing: _busy
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : quota.isPremium
-              ? TextButton(
-                  onPressed: _openPortal,
-                  child: Text(l.manageSubscription),
+      trailing: !canBuy
+          ? null
+          : _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : FilledButton.tonal(
-                  onPressed: () => context.push('/paywall'),
-                  child: Text(l.upgrade),
-                ),
+              : quota.isPremium
+                  ? TextButton(
+                      onPressed: _openPortal,
+                      child: Text(l.manageSubscription),
+                    )
+                  : FilledButton.tonal(
+                      onPressed: () => context.push('/paywall'),
+                      child: Text(l.upgrade),
+                    ),
     );
   }
 }

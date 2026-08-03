@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/chat/data/chat_repository.dart';
 import 'package:dollchecker/features/chat/domain/chat_message.dart';
@@ -208,22 +209,28 @@ class _Starters extends StatelessWidget {
   }
 }
 
-class _PremiumBanner extends StatelessWidget {
+class _PremiumBanner extends ConsumerWidget {
   const _PremiumBanner({required this.onUpgrade});
   final VoidCallback onUpgrade;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    // Why the chat is locked is worth saying everywhere. Where to buy is not:
+    // on a build with no purchase path the button would lead to a page that
+    // only explains it cannot sell anything.
+    final canBuy = ref.watch(billingAllowedProvider);
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: ListTile(
         leading: const Icon(Icons.workspace_premium_outlined),
         title: Text(l.chatPremiumRequired),
-        trailing: FilledButton.tonal(
-          onPressed: onUpgrade,
-          child: Text(l.upgrade),
-        ),
+        trailing: !canBuy
+            ? null
+            : FilledButton.tonal(
+                onPressed: onUpgrade,
+                child: Text(l.upgrade),
+              ),
       ),
     );
   }

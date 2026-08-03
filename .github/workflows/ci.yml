@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets the macOS-only iOS job below be started by hand.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -138,3 +140,40 @@ jobs:
 
       - name: Test
         run: deno test supabase/functions/
+
+  # iOS is not built on every pull request: it needs a macOS runner, which is
+  # billed at ten times the Linux rate. It is `workflow_dispatch` instead —
+  # free until someone runs it, and the only way to find out whether the iOS
+  # side still compiles without owning a Mac. Run it before any submission.
+  ios:
+    name: iOS build (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      - name: Generate platform folders
+        run: flutter create --platforms=ios --project-name dollchecker .
+
+      - name: Apply platform configuration
+        run: python3 ../tool/configure_platform.py .
+
+      - name: Launcher icons
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+
+      # No signing identity in CI, so this stops short of an .ipa. It still
+      # compiles every plugin's Objective-C/Swift and links the app, which is
+      # where an iOS-only break would show up.
+      - name: Build (no code signing)
+        run: flutter build ios --debug --no-codesign
