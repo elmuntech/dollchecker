@@ -126,6 +126,10 @@ class LocalReminderScheduler implements ReminderScheduler {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      // The time the parent picked is a wall-clock time, not an instant: 18:00
+      // means 18:00 wherever they are, including after a timezone change.
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       // Same wall-clock time every day, which is what a parent means by "18:00"
       // even across a daylight-saving change.
       matchDateTimeComponents: DateTimeComponents.time,
