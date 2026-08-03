@@ -13,6 +13,7 @@ import 'package:dollchecker/features/missions/data/mission_repository.dart';
 import 'package:dollchecker/features/missions/domain/mission.dart';
 import 'package:dollchecker/features/missions/domain/mission_stats.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+import 'package:dollchecker/shared/widgets/error_retry.dart';
 
 /// The daily hook: three play missions for the selected child, the streak they
 /// feed, and the toys due to come back out of the cupboard.
@@ -66,9 +67,9 @@ class MissionsScreen extends ConsumerWidget {
                 padding: EdgeInsets.all(32),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (_, __) => Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(l.analysisFailed),
+              error: (_, __) => ErrorRetry(
+                compact: true,
+                onRetry: () => ref.invalidate(todaysMissionsProvider),
               ),
               data: (items) => items.isEmpty
                   ? Padding(

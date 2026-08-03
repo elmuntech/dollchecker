@@ -271,5 +271,7 @@
   "dailyReminderHint": "Одно напоминание в день о миссиях",
   "reminderTime": "Время напоминания",
   "reminderTitle": "Пора играть",
-  "reminderBody": "Миссии на сегодня ждут в DollChecker."
+  "reminderBody": "Миссии на сегодня ждут в DollChecker.",
+  "couldNotLoad": "Не удалось загрузить. Проверьте соединение.",
+  "loadMore": "Загрузить ещё"
 }

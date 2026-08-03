@@ -292,5 +292,7 @@
   "dailyReminderHint": "One nudge a day about today's missions",
   "reminderTime": "Reminder time",
   "reminderTitle": "Time to play",
-  "reminderBody": "Today's missions are waiting in DollChecker."
+  "reminderBody": "Today's missions are waiting in DollChecker.",
+  "couldNotLoad": "Could not load this. Check your connection.",
+  "loadMore": "Load more"
 }
