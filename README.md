@@ -47,6 +47,8 @@ supabase/
   migrations/0003_daily_missions.sql          daily missions + toy rotation
   functions/analyze-toy/index.ts              Claude vision proxy
   functions/analyze-toy/utils.ts              pure helpers (quota, toy identity)
+  functions/delete-account/index.ts           account + storage deletion (store requirement)
+docs/INTEGRATIONS.md      third-party setup still to be wired (keys, URLs, store accounts)
 .github/workflows/ci.yml  analyze + test, Flutter and Deno
 ```
 
@@ -63,8 +65,9 @@ supabase db push                       # applies everything in migrations/
 # Set the Anthropic key as an Edge Function secret (never in the client):
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
-# Deploy the analyzer:
+# Deploy the functions:
 supabase functions deploy analyze-toy
+supabase functions deploy delete-account
 ```
 
 Create the `toy-images` storage bucket (private) — the migration adds it, or create it in the
@@ -89,6 +92,12 @@ Models are hand-written and state is manual Riverpod, so **no `build_runner` is 
 only the official `gen-l10n` (runs automatically on `flutter pub get` / `flutter run`).
 
 `SUPABASE_ANON_KEY` is a public client key — safe to ship. Row-Level Security protects data.
+`.env` also carries `AUTH_REDIRECT_URL` (the deep link email confirmations and password
+resets return to) and the optional `PRIVACY_URL` / `TERMS_URL` / `SUPPORT_EMAIL` links —
+the parents panel hides whichever of those is still blank.
+
+Everything that needs an external account, key or published URL is tracked in
+[`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
 
 ## App flow
 
@@ -127,6 +136,22 @@ The week is assembled from two household-wide queries (scans and missions) plus 
 development aggregate per child. Both queries deliberately over-fetch by a few hours,
 because a date bound in UTC cannot express a local calendar day — `HouseholdReport.build`
 trims the window to local days, so a scan at 23:00 counts for the day the parent made it.
+
+### Account lifecycle
+
+Sign-in is email + password. The flow covers what a real account needs:
+
+- **Forgot password** emails a recovery link. Opening it on the device puts the app in
+  recovery mode — the router pins the user to "set a new password" until they either
+  save one or abandon the flow, which signs them out rather than dropping a
+  password-less session into the app.
+- **Sign-up** handles both project settings: if email confirmation is on, the form is
+  replaced by "open the link we sent to <address>"; if it is off, the user goes straight in.
+- **Errors are classified, not echoed.** `AuthFailure` maps Supabase's English strings to
+  eight actionable cases, so a Russian user reads a Russian sentence that says what to do.
+- **Delete account** (parents panel → Account) removes the storage objects first, then the
+  `auth.users` row — every table cascades from it. Both stores require this to exist
+  inside the app.
 
 ### How daily missions work
 

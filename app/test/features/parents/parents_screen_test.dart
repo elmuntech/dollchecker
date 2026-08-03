@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/config/legal_links.dart';
+import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/collection/domain/toy.dart';
 import 'package:dollchecker/features/missions/data/mission_repository.dart';
@@ -45,6 +47,35 @@ Toy toy(String name, {String safety = 'red'}) => Toy.fromRow({
       'last_scanned_at': '2026-07-25T09:00:00Z',
     });
 
+/// Stands in for the real repository so "delete account" can be exercised
+/// without a server.
+class FakeAuthRepository implements AuthRepository {
+  bool deleted = false;
+
+  @override
+  Future<void> deleteAccount() async => deleted = true;
+
+  @override
+  Future<void> signIn({required String email, required String password}) async {
+  }
+
+  @override
+  Future<SignUpOutcome> signUp({
+    required String email,
+    required String password,
+  }) async =>
+      SignUpOutcome.signedIn;
+
+  @override
+  Future<void> sendPasswordReset(String email) async {}
+
+  @override
+  Future<void> updatePassword(String password) async {}
+
+  @override
+  Future<void> signOut() async {}
+}
+
 void main() {
   Future<void> pumpPanel(
     WidgetTester tester, {
@@ -52,6 +83,8 @@ void main() {
     SafetyWatch? watch,
     QuotaStatus quota = const QuotaStatus(tier: 'free', used: 3, resetAt: null),
     List<ChildProfile> children = const [_alma],
+    LegalLinks links = LegalLinks.none,
+    AuthRepository? auth,
     Locale locale = const Locale('en'),
   }) {
     return pumpApp(
@@ -67,6 +100,9 @@ void main() {
         ),
         safetyWatchProvider.overrideWith((ref) async => watch ?? SafetyWatch.empty),
         quotaProvider.overrideWith((ref) async => quota),
+        legalLinksProvider.overrideWithValue(links),
+        authRepositoryProvider
+            .overrideWithValue(auth ?? FakeAuthRepository()),
         signedImageProvider.overrideWith((ref, arg) async => null),
       ],
     );
@@ -202,6 +238,99 @@ void main() {
         report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
       );
       expect(find.textContaining('Unlimited scans'), findsOneWidget);
+    });
+  });
+
+  group('legal links', () {
+    testWidgets('are hidden until the pages are published', (tester) async {
+      await pumpPanel(
+        tester,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      expect(find.text('Legal'), findsNothing);
+      expect(find.text('Privacy policy'), findsNothing);
+    });
+
+    testWidgets('show only what is configured', (tester) async {
+      await pumpPanel(
+        tester,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+        links: const LegalLinks(privacyUrl: 'https://example.com/privacy'),
+      );
+      expect(find.text('Legal'), findsOneWidget);
+      expect(find.text('Privacy policy'), findsOneWidget);
+      expect(find.text('Terms of service'), findsNothing);
+      expect(find.text('Contact support'), findsNothing);
+    });
+
+    testWidgets('show all three when all are configured', (tester) async {
+      await pumpPanel(
+        tester,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+        links: const LegalLinks(
+          privacyUrl: 'https://example.com/privacy',
+          termsUrl: 'https://example.com/terms',
+          supportEmail: 'help@example.com',
+        ),
+      );
+      expect(find.text('Privacy policy'), findsOneWidget);
+      expect(find.text('Terms of service'), findsOneWidget);
+      expect(find.text('Contact support'), findsOneWidget);
+    });
+  });
+
+  group('delete account', () {
+    testWidgets('is offered, as the stores require', (tester) async {
+      await pumpPanel(
+        tester,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      expect(find.text('Delete account'), findsOneWidget);
+    });
+
+    testWidgets('states what disappears before doing anything', (tester) async {
+      final auth = FakeAuthRepository();
+      await pumpPanel(
+        tester,
+        auth: auth,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('permanently deletes'), findsOneWidget);
+      expect(auth.deleted, isFalse);
+    });
+
+    testWidgets('cancelling leaves the account alone', (tester) async {
+      final auth = FakeAuthRepository();
+      await pumpPanel(
+        tester,
+        auth: auth,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(auth.deleted, isFalse);
+    });
+
+    testWidgets('confirming deletes and says so', (tester) async {
+      final auth = FakeAuthRepository();
+      await pumpPanel(
+        tester,
+        auth: auth,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete everything'));
+      await tester.pumpAndSettle();
+
+      expect(auth.deleted, isTrue);
+      expect(find.text('Your account has been deleted.'), findsOneWidget);
     });
   });
 

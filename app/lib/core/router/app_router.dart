@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:dollchecker/core/supabase/supabase.dart';
+import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/auth/presentation/auth_screen.dart';
+import 'package:dollchecker/features/auth/presentation/reset_password_screen.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/children_screen.dart';
 import 'package:dollchecker/features/child_profile/presentation/onboarding_child_screen.dart';
@@ -25,6 +28,16 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(sessionProvider, (_, __) => refresh.value++);
   ref.listen(childrenProvider, (_, __) => refresh.value++);
+  ref.listen(passwordRecoveryProvider, (_, __) => refresh.value++);
+
+  // A recovery link signs the user in with a session whose only purpose is
+  // changing the password, so the arrival has to be remembered — the session
+  // itself looks like any other.
+  ref.listen(authStateProvider, (_, next) {
+    if (next.valueOrNull?.event == AuthChangeEvent.passwordRecovery) {
+      ref.read(passwordRecoveryProvider.notifier).state = true;
+    }
+  });
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -37,6 +50,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (session == null) {
         return loc == '/auth' ? null : '/auth';
       }
+
+      // Arrived through a recovery link: nothing else in the app is reachable
+      // until a new password is set (or the flow is abandoned, which signs out).
+      if (ref.read(passwordRecoveryProvider)) {
+        return loc == '/reset-password' ? null : '/reset-password';
+      }
+      if (loc == '/reset-password') return '/';
       if (loc == '/auth') return '/';
 
       // Signed in — require at least one child profile before using the app.
@@ -51,6 +71,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/auth', builder: (_, __) => const AuthScreen()),
+      GoRoute(
+          path: '/reset-password',
+          builder: (_, __) => const ResetPasswordScreen()),
       GoRoute(
           path: '/onboarding',
           builder: (_, __) => const OnboardingChildScreen()),

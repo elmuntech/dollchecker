@@ -228,5 +228,42 @@
   "needsAttention": "{count, plural, =1{1 toy needs attention} other{{count} toys need attention}}",
   "@needsAttention": { "placeholders": { "count": { "type": "int" } } },
 
-  "account": "Account"
+  "account": "Account",
+
+  "forgotPassword": "Forgot your password?",
+  "resetPassword": "Reset password",
+  "resetPasswordHint": "Enter your email and we'll send you a link to set a new password.",
+  "sendResetLink": "Send reset link",
+  "resetEmailSent": "If {email} has an account, a reset link is on its way. Open it on this device.",
+  "@resetEmailSent": { "placeholders": { "email": {} } },
+  "backToSignIn": "Back to sign in",
+  "checkInbox": "Confirm your email",
+  "checkInboxHint": "We sent a confirmation link to {email}. Open it to finish creating your account.",
+  "@checkInboxHint": { "placeholders": { "email": {} } },
+  "newPassword": "New password",
+  "newPasswordHint": "Choose a new password for your account.",
+  "confirmPassword": "Repeat password",
+  "passwordsDoNotMatch": "The two passwords do not match.",
+  "savePassword": "Save new password",
+  "passwordUpdated": "Password updated.",
+  "passwordRule": "At least 6 characters",
+
+  "authInvalidCredentials": "Wrong email or password.",
+  "authEmailNotConfirmed": "Confirm your email first — check your inbox.",
+  "authEmailTaken": "That email already has an account. Sign in instead.",
+  "authWeakPassword": "Use a password of at least 6 characters.",
+  "authInvalidEmail": "Enter a valid email address.",
+  "authRateLimited": "Too many attempts. Wait a minute and try again.",
+  "authNetwork": "No connection. Check your internet and try again.",
+
+  "legal": "Legal",
+  "privacyPolicy": "Privacy policy",
+  "termsOfService": "Terms of service",
+  "contactSupport": "Contact support",
+  "deleteAccount": "Delete account",
+  "deleteAccountHint": "Deletes your account and everything in it",
+  "deleteAccountConfirm": "This permanently deletes your account, your children's profiles, every scan, your collection and all uploaded photos. It cannot be undone.",
+  "deleteAccountAction": "Delete everything",
+  "accountDeleted": "Your account has been deleted.",
+  "deleteAccountFailed": "Could not delete the account. Please try again."
 }

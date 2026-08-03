@@ -1,6 +1,30 @@
 import 'package:dollchecker/core/domain/skills.dart';
+import 'package:dollchecker/features/auth/domain/auth_failure.dart';
 import 'package:dollchecker/features/missions/domain/mission_stats.dart';
 import 'package:dollchecker/l10n/app_localizations.dart';
+
+/// What to tell the user about a failed sign-in, sign-up or reset. Every case
+/// is actionable: it says what to do next, not what the server called it.
+String authFailureLabel(AppLocalizations l, AuthFailure failure) {
+  switch (failure) {
+    case AuthFailure.invalidCredentials:
+      return l.authInvalidCredentials;
+    case AuthFailure.emailNotConfirmed:
+      return l.authEmailNotConfirmed;
+    case AuthFailure.emailTaken:
+      return l.authEmailTaken;
+    case AuthFailure.weakPassword:
+      return l.authWeakPassword;
+    case AuthFailure.invalidEmail:
+      return l.authInvalidEmail;
+    case AuthFailure.rateLimited:
+      return l.authRateLimited;
+    case AuthFailure.network:
+      return l.authNetwork;
+    case AuthFailure.unknown:
+      return l.authError;
+  }
+}
 
 /// Maps stable English machine keys (from the AI / DB) to localized display
 /// labels. The AI returns machine keys; the UI shows translated text.
