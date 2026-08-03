@@ -204,6 +204,10 @@ helpers). Nothing has yet run against a live Supabase project.
 | Per-scan AI chat | ✅ |
 | History paging, visible errors with retry, signed-URL expiry | ✅ |
 | Real Android build in CI + executable platform config | ✅ |
+| App icon, application id, display name, release signing config | ✅ |
+| Legal documents (privacy, terms, refunds) ready to publish | ✅ |
+| Store listings EN/RU, data-safety and content-rating answers, submission checklist | ✅ |
+| Tag-driven release workflow producing a signed `.aab` | ✅ |
 
 ## 9. Not done — known gaps
 
@@ -220,6 +224,11 @@ helpers). Nothing has yet run against a live Supabase project.
   — not a check against official recalls.
 - No offline mode. Everything is a live query; a scan in a shop with poor signal
   fails.
+
+**Store submission** — what is left is account-shaped, not code-shaped:
+screenshots captured on a device, a feature graphic, the legal placeholders
+filled in and published, the upload keystore, and the store accounts themselves.
+`store/submission-checklist.md` is the running list.
 
 **Engineering**
 

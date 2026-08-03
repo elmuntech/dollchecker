@@ -1,0 +1,116 @@
+name: Release
+
+# Builds a signed Android App Bundle from a tag. Nothing here runs on an
+# ordinary push: a release is an explicit act.
+#
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Required repository secrets (see docs/RELEASING.md):
+#   ANDROID_KEYSTORE_BASE64   base64 of the .jks upload key
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+#   SUPABASE_URL
+#   SUPABASE_ANON_KEY
+#   AUTH_REDIRECT_URL, PRIVACY_URL, TERMS_URL, SUPPORT_EMAIL,
+#   PREMIUM_PRICE_LABEL       (optional — blank is handled by the app)
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Signed Android bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      # The committed .env holds placeholders on purpose — the real values are
+      # secrets, and a release built against placeholders would start up into
+      # the "missing configuration" screen.
+      - name: Write .env
+        run: |
+          cat > .env <<EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          AUTH_REDIRECT_URL=${{ secrets.AUTH_REDIRECT_URL }}
+          PRIVACY_URL=${{ secrets.PRIVACY_URL }}
+          TERMS_URL=${{ secrets.TERMS_URL }}
+          SUPPORT_EMAIL=${{ secrets.SUPPORT_EMAIL }}
+          PREMIUM_PRICE_LABEL=${{ secrets.PREMIUM_PRICE_LABEL }}
+          EOF
+          test -s .env
+          grep -q "YOUR-PROJECT" .env && { echo "SUPABASE_URL secret is unset"; exit 1; } || true
+
+      # iOS is generated for the icon set, which covers both platforms; only
+      # the Android artifacts are built here.
+      - name: Generate platform folders
+        run: flutter create --platforms=android,ios --project-name dollchecker .
+
+      - name: Apply platform configuration
+        run: python3 ../tool/configure_platform.py . --release-signing
+
+      - name: Launcher icons
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
+
+      - name: Restore the upload key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE" || { echo "ANDROID_KEYSTORE_BASE64 is unset"; exit 1; }
+          echo "$KEYSTORE" | base64 -d > android/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      # Play wants an .aab; the .apk is for handing to a tester directly.
+      - name: Build app bundle
+        run: flutter build appbundle --release
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Check the bundle is not debug-signed
+        run: |
+          bundle=build/app/outputs/bundle/release/app-release.aab
+          test -f "$bundle"
+          unzip -l "$bundle" | grep -q "META-INF" \
+            || { echo "bundle is unsigned"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dollchecker-release
+          path: |
+            app/build/app/outputs/bundle/release/app-release.aab
+            app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      # Secrets are in the runner's filesystem; the runner is ephemeral, but
+      # leaving them lying around during later steps is needless.
+      - name: Shred the key
+        if: always()
+        run: rm -f android/upload-keystore.jks android/key.properties .env

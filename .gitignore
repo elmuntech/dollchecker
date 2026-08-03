@@ -9,6 +9,21 @@ app/pubspec.lock
 **/*.freezed.dart
 app/lib/l10n/app_localizations*.dart
 
+# Generated platform projects — recreated by `flutter create` and configured by
+# tool/configure_platform.py, so they are never committed and never drift.
+app/android/
+app/ios/
+app/linux/
+app/macos/
+app/windows/
+app/web/
+
+# Signing material. Losing the upload key means never updating the app again,
+# so it is backed up out of band — but it must never be in the repository.
+*.jks
+*.keystore
+**/key.properties
+
 # Env / secrets
 # NOTE: app/.env holds only PUBLIC client values (Supabase URL + anon key) and is
 # intentionally tracked so the app builds after clone. Real secrets never go here.
