@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:dollchecker/core/config/legal_links.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/auth/data/auth_repository.dart';
+import 'package:dollchecker/features/billing/data/billing_repository.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/child_switcher.dart';
 import 'package:dollchecker/features/collection/domain/toy.dart';
@@ -361,16 +362,7 @@ class _AccountSection extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
-          if (quota != null)
-            ListTile(
-              leading: const Icon(Icons.workspace_premium_outlined),
-              title: Text(l.plan),
-              subtitle: Text(
-                quota.isPremium
-                    ? '${l.planPremium} · ${l.unlimitedScans}'
-                    : '${l.planFree} · ${l.scansLeft(quota.remaining ?? 0)}',
-              ),
-            ),
+          if (quota != null) _PlanTile(quota: quota),
           ListTile(
             leading: const Icon(Icons.child_care_outlined),
             title: Text(l.children),
@@ -386,6 +378,68 @@ class _AccountSection extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The plan the household is on, and the one action that goes with it:
+/// upgrading, or managing the subscription that already exists. Cancelling has
+/// to be reachable from inside the app, not only from a billing email.
+class _PlanTile extends ConsumerStatefulWidget {
+  const _PlanTile({required this.quota});
+  final QuotaStatus quota;
+
+  @override
+  ConsumerState<_PlanTile> createState() => _PlanTileState();
+}
+
+class _PlanTileState extends ConsumerState<_PlanTile> {
+  bool _busy = false;
+
+  Future<void> _openPortal() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = AppLocalizations.of(context).portalFailed;
+
+    setState(() => _busy = true);
+    try {
+      final url = await ref.read(billingRepositoryProvider).portalUrl();
+      final opened = await ref.read(externalLauncherProvider)(Uri.parse(url));
+      if (!opened) messenger.showSnackBar(SnackBar(content: Text(failed)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final quota = widget.quota;
+
+    return ListTile(
+      leading: const Icon(Icons.workspace_premium_outlined),
+      title: Text(l.plan),
+      subtitle: Text(
+        quota.isPremium
+            ? '${l.planPremium} · ${l.unlimitedScans}'
+            : '${l.planFree} · ${l.scansLeft(quota.remaining ?? 0)}',
+      ),
+      trailing: _busy
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : quota.isPremium
+              ? TextButton(
+                  onPressed: _openPortal,
+                  child: Text(l.manageSubscription),
+                )
+              : FilledButton.tonal(
+                  onPressed: () => context.push('/paywall'),
+                  child: Text(l.upgrade),
+                ),
     );
   }
 }

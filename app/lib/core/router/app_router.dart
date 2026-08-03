@@ -7,6 +7,7 @@ import 'package:dollchecker/core/supabase/supabase.dart';
 import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/auth/presentation/auth_screen.dart';
 import 'package:dollchecker/features/auth/presentation/reset_password_screen.dart';
+import 'package:dollchecker/features/billing/presentation/paywall_screen.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
 import 'package:dollchecker/features/child_profile/presentation/children_screen.dart';
 import 'package:dollchecker/features/child_profile/presentation/onboarding_child_screen.dart';
@@ -110,6 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/analyzing', builder: (_, __) => const AnalyzingScreen()),
       GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
       GoRoute(path: '/parents', builder: (_, __) => const ParentsScreen()),
+      GoRoute(path: '/paywall', builder: (_, __) => const PaywallScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/children', builder: (_, __) => const ChildrenScreen()),
       GoRoute(

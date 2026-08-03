@@ -45,9 +45,12 @@ supabase/
   migrations/0001_init.sql                    schema + RLS + storage bucket
   migrations/0002_v1_collection_dashboard.sql toy identity, aggregates, RPCs
   migrations/0003_daily_missions.sql          daily missions + toy rotation
+  migrations/0004_billing.sql                 subscription state, locked-down profile columns
   functions/analyze-toy/index.ts              Claude vision proxy
   functions/analyze-toy/utils.ts              pure helpers (quota, toy identity)
   functions/delete-account/index.ts           account + storage deletion (store requirement)
+  functions/polar-billing/index.ts            Polar checkout + customer portal links
+  functions/polar-webhook/index.ts            Polar events → account tier (only writer)
 docs/INTEGRATIONS.md      third-party setup still to be wired (keys, URLs, store accounts)
 .github/workflows/ci.yml  analyze + test, Flutter and Deno
 ```
@@ -136,6 +139,24 @@ The week is assembled from two household-wide queries (scans and missions) plus 
 development aggregate per child. Both queries deliberately over-fetch by a few hours,
 because a date bound in UTC cannot express a local calendar day — `HouseholdReport.build`
 trims the window to local days, so a scan at 23:00 counts for the day the parent made it.
+
+### Subscriptions
+
+Payments go through **Polar.sh**, which is a merchant of record — no tax setup, and
+no card data anywhere near the app.
+
+- `polar-billing` returns a hosted **checkout** URL, or a **customer portal** URL for
+  changing and cancelling. The app opens the link and holds no Polar token.
+- `polar-webhook` is the **only** writer of `profiles.tier`. The client never reports
+  its own subscription state; it re-reads the tier and waits for the upgrade to land.
+- Migration 0004 revokes blanket `update` on `profiles` and grants back only
+  `display_name` and `locale`. Without that, the existing "update your own row" policy
+  would let any user set `tier = 'premium'` with one PATCH.
+- Out-of-order webhooks cannot move a subscription backwards: `apply_subscription_state`
+  ignores an event older than the one already recorded, and `billing_events` makes a
+  replayed delivery a no-op.
+- Until the Polar keys exist, `polar-billing` answers `503` and the paywall says premium
+  is not open yet. Everything else in the app keeps working.
 
 ### Account lifecycle
 

@@ -7,3 +7,11 @@ verify_jwt = true
 
 [functions.delete-account]
 verify_jwt = true
+
+[functions.polar-billing]
+verify_jwt = true
+
+[functions.polar-webhook]
+# Polar is not a Supabase user and sends no JWT. The Standard Webhooks
+# signature check inside the function authenticates the caller instead.
+verify_jwt = false

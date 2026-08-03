@@ -229,6 +229,8 @@ void main() {
       expect(find.textContaining('7 free scans left'), findsOneWidget);
       expect(find.text('Alma, Bek'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Upgrade'), findsOneWidget);
+      expect(find.text('Manage subscription'), findsNothing);
     });
 
     testWidgets('a premium plan reads as unlimited', (tester) async {
@@ -238,6 +240,9 @@ void main() {
         report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
       );
       expect(find.textContaining('Unlimited scans'), findsOneWidget);
+      // Cancelling has to be reachable from inside the app.
+      expect(find.text('Manage subscription'), findsOneWidget);
+      expect(find.text('Upgrade'), findsNothing);
     });
   });
 
