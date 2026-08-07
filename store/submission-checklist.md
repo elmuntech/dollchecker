@@ -15,16 +15,24 @@ make; everything else is already done in the repository.
 - [ ] **you** — **Legal entity.** Who is publishing: a person or a company? It
       goes on both store listings, in the legal documents, and in the Polar
       account. Play requires a verified D-U-N-S number for organisations.
-- [ ] **you** — **iOS payments.** Polar checkout opened in a browser is how the
-      app works today. Apple normally requires In-App Purchase for digital
-      goods used inside the app. Either (a) submit and argue the case, (b) ship
-      iOS without the subscription at first, or (c) add StoreKit/RevenueCat for
-      iOS before submitting. **Android and web are unaffected.** This is the
-      single biggest open risk in the release.
+- [x] **iOS payments — decided: (b), ship iOS without the subscription.**
+      Apple requires In-App Purchase for digital goods unlocked inside the app
+      (guideline 3.1.1) and forbids steering the user to an outside purchase
+      (3.1.3), which rules out both the checkout button *and* the "manage
+      subscription" link. So the iOS build shows no purchase path at all:
+      `kAllowIosCheckout = false` in
+      `app/lib/core/config/store_billing.dart`, and that one constant is the
+      only thing that decides. Premium bought on Android or the web still
+      works everywhere — the tier comes from the server.
+
+      This is a judgement about review risk, not legal advice. To change it:
+      set the constant to `true` and submit with the web checkout, or add
+      StoreKit/RevenueCat and gate on the platform there instead. **Android
+      and web are unaffected either way.**
 
 ## 1. Backend live
 
-- [ ] `supabase link` and `supabase db push` — migrations `0001`–`0005`
+- [ ] `supabase link` and `supabase db push` — migrations `0001`–`0006`
 - [ ] `supabase secrets set ANTHROPIC_API_KEY=…`
 - [ ] Deploy: `analyze-toy`, `chat-toy`, `delete-account`, `polar-billing`
 - [ ] Deploy `polar-webhook` **with `--no-verify-jwt`**
@@ -90,13 +98,28 @@ Give the reviewer a **test account with premium already enabled**, and say:
 > Account deletion is at: Parents panel (person icon, top right of Home) →
 > Account → Delete account.
 >
-> Subscriptions are handled by Polar (merchant of record) through a hosted
-> checkout in the browser. The provided account already has premium, so no
-> purchase is needed to review the paid features.
->
 > The app gives AI guidance from a photograph and states throughout that it is
 > not a safety certification and does not replace packaging warnings or recall
 > data.
+
+Then add the paragraph for the store you are submitting to — they are not the
+same app in this one respect, and saying the wrong one invites the rejection
+it was meant to prevent.
+
+**Google Play:**
+
+> Subscriptions are handled by Polar (merchant of record) through a hosted
+> checkout in the browser. The provided account already has premium, so no
+> purchase is needed to review the paid features.
+
+**App Store:**
+
+> This build sells nothing. There is no in-app purchase, no checkout, and no
+> link to any external purchase page. Some features are marked as part of a
+> paid tier; accounts that already hold that tier — including the one provided
+> — have them enabled, and the entitlement is returned by our server. The
+> provided account already has it, so no purchase is needed to review the paid
+> features.
 
 ## 7. After the first release
 
@@ -112,6 +135,9 @@ Give the reviewer a **test account with premium already enabled**, and say:
 - **Crash reporting and analytics.** Both need an external account and neither
   blocks a submission. Worth adding before you have real users, not before you
   have a build.
-- **iOS CI.** The release workflow builds Android only; iOS needs a macOS
-  runner and a provisioning profile. Build it from Xcode for the first
-  submission.
+- **iOS in the release workflow.** The tagged release builds Android only;
+  producing an `.ipa` needs a provisioning profile and a signing identity.
+  CI *does* now have an `iOS build (manual)` job — run it from the Actions tab
+  before a submission to confirm the iOS side still compiles. It is
+  `workflow_dispatch` because macOS runners bill at ten times the Linux rate,
+  so it costs nothing until you start it.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:dollchecker/core/config/env.dart';
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/billing/data/billing_repository.dart';
@@ -86,6 +87,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final price = ref.watch(priceLabelProvider);
+    final canBuy = ref.watch(billingAllowedProvider);
     final busy = _stage == _Stage.opening || _stage == _Stage.waiting;
 
     return Scaffold(
@@ -113,32 +115,43 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             _Benefit(icon: Icons.local_fire_department, text: l.benefitMissions),
             _Benefit(icon: Icons.family_restroom, text: l.benefitEveryChild),
             const SizedBox(height: 24),
-            if (price != null) ...[
+            // The benefits are shown on every platform — they are what the
+            // account already has or could have. Only the ways to buy are
+            // platform-dependent.
+            if (!canBuy)
               Text(
-                price,
+                l.premiumElsewhere,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else ...[
+              if (price != null) ...[
+                Text(
+                  price,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+              ],
+              FilledButton(
+                onPressed: busy ? null : _startCheckout,
+                child: busy
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l.premiumCta),
               ),
               const SizedBox(height: 12),
+              _StageMessage(stage: _stage, onRecheck: _recheck),
+              const SizedBox(height: 16),
+              Text(
+                l.premiumFinePrint,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
-            FilledButton(
-              onPressed: busy ? null : _startCheckout,
-              child: busy
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l.premiumCta),
-            ),
-            const SizedBox(height: 12),
-            _StageMessage(stage: _stage, onRecheck: _recheck),
-            const SizedBox(height: 16),
-            Text(
-              l.premiumFinePrint,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dollchecker/core/config/legal_links.dart';
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/features/auth/data/auth_repository.dart';
 import 'package:dollchecker/features/child_profile/child_profile.dart';
@@ -92,6 +93,7 @@ void main() {
     List<ChildProfile> children = const [_alma],
     LegalLinks links = LegalLinks.none,
     AuthRepository? auth,
+    bool canBuy = true,
     Locale locale = const Locale('en'),
   }) {
     return pumpApp(
@@ -108,6 +110,7 @@ void main() {
         safetyWatchProvider.overrideWith((ref) async => watch ?? SafetyWatch.empty),
         quotaProvider.overrideWith((ref) async => quota),
         legalLinksProvider.overrideWithValue(links),
+        billingAllowedProvider.overrideWithValue(canBuy),
         authRepositoryProvider
             .overrideWithValue(auth ?? FakeAuthRepository()),
         signedImageProvider.overrideWith((ref, arg) async => null),
@@ -250,6 +253,32 @@ void main() {
       // Cancelling has to be reachable from inside the app.
       expect(find.text('Manage subscription'), findsOneWidget);
       expect(find.text('Upgrade'), findsNothing);
+    });
+
+    testWidgets('a build with no purchase path still states the tier',
+        (tester) async {
+      // The account is premium and must read as premium wherever it was
+      // bought. Only the two links that leave for the provider are gone.
+      await pumpPanel(
+        tester,
+        canBuy: false,
+        quota: const QuotaStatus(tier: 'premium', used: 40, resetAt: null),
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      expect(find.textContaining('Unlimited scans'), findsOneWidget);
+      expect(find.text('Manage subscription'), findsNothing);
+      expect(find.text('Upgrade'), findsNothing);
+    });
+
+    testWidgets('a free plan offers no upgrade where none is possible',
+        (tester) async {
+      await pumpPanel(
+        tester,
+        canBuy: false,
+        report: HouseholdReport(totalScans: 0, children: [week(_alma)]),
+      );
+      expect(find.textContaining('7 free scans left'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Upgrade'), findsNothing);
     });
   });
 

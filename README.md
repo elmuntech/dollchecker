@@ -209,6 +209,13 @@ no card data anywhere near the app.
   replayed delivery a no-op.
 - Until the Polar keys exist, `polar-billing` answers `503` and the paywall says premium
   is not open yet. Everything else in the app keeps working.
+- **iOS sells nothing.** App Store guideline 3.1.1 requires IAP for digital goods
+  unlocked in the app, and 3.1.3 forbids steering the user to an outside purchase — so
+  the checkout button *and* the manage-subscription link are both risks there, not just
+  the first. `kAllowIosCheckout` in `app/lib/core/config/store_billing.dart` is the one
+  place that decides; it is `false`, and every upgrade CTA in the app reads it. A
+  premium account still reads as premium on iOS and every paid feature works: the tier
+  comes from the server, so where it was bought does not matter.
 
 ### Abuse and cost control
 

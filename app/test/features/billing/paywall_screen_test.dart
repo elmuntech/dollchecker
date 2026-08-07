@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:dollchecker/core/config/store_billing.dart';
 import 'package:dollchecker/core/errors/rate_limited.dart';
 import 'package:dollchecker/core/utils/external_link.dart';
 import 'package:dollchecker/features/billing/data/billing_repository.dart';
@@ -59,6 +60,7 @@ void main() {
     FakeBillingRepository? billing,
     bool launcherSucceeds = true,
     String? price,
+    bool canBuy = true,
     Locale locale = const Locale('en'),
   }) {
     return pumpApp(
@@ -70,6 +72,7 @@ void main() {
         billingRepositoryProvider
             .overrideWithValue(billing ?? FakeBillingRepository()),
         priceLabelProvider.overrideWithValue(price),
+        billingAllowedProvider.overrideWithValue(canBuy),
         externalLauncherProvider.overrideWithValue((uri) async {
           opened.add(uri);
           return launcherSucceeds;
@@ -168,6 +171,28 @@ void main() {
     expect(find.text('Could not open checkout. Please try again.'),
         findsNothing);
     expect(opened, isEmpty);
+  });
+
+  group('a build with no purchase path (iOS)', () {
+    testWidgets('shows the plan but offers no way to buy it', (tester) async {
+      await pumpPaywall(tester, canBuy: false, price: r'$4.99 / month');
+
+      // What premium is stays visible — the account may already have it.
+      expect(find.text('Unlimited toy analyses'), findsOneWidget);
+      // How to get it does not: no button, no price, no steering.
+      expect(find.widgetWithText(FilledButton, 'Continue to checkout'),
+          findsNothing);
+      expect(find.text(r'$4.99 / month'), findsNothing);
+      expect(find.textContaining('outside this app'), findsOneWidget);
+    });
+
+    testWidgets('cannot reach checkout even if something taps through',
+        (tester) async {
+      final billing = FakeBillingRepository();
+      await pumpPaywall(tester, billing: billing, canBuy: false);
+      expect(billing.checkoutCalls, 0);
+      expect(opened, isEmpty);
+    });
   });
 
   testWidgets('renders in Russian', (tester) async {
